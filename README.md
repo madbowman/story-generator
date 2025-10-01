@@ -2,34 +2,42 @@
 
 A desktop application for creating serialized episodic stories through human-AI collaboration.
 
-## Features (Phase 1)
+## ✅ Features (Phase 1)
 
-✅ **Project Management**
+**Project Management**
 - Create and manage multiple story projects
 - Auto-save functionality
 - Project metadata (title, genre, description)
 
-✅ **World Building**
+**World Building**
 - Collaborative world development with AI
 - World overview editor
 - Locations management
 - Character templates
+- Factions, religions, NPCs, glossary
 - Structured JSON storage
 
-✅ **AI Integration**
+**AI Integration**
 - Local Ollama integration
 - Real-time AI status monitoring
 - Available models listing
 - Adjustable creativity (temperature)
 - Chat interface for collaboration
 
-✅ **Modern UI**
+**Consistency Validation**
+- Check world building completeness
+- Validate location IDs and routes
+- Verify character relationships
+- Detect duplicate IDs
+- Provide suggestions for improvements
+
+**Modern UI**
 - Three-panel layout (Navigation | Editor | AI Chat)
 - Dark theme optimized for long writing sessions
 - Responsive components
 - Save status indicators
 
-## Tech Stack
+## 🛠 Tech Stack
 
 **Backend:**
 - Python 3.10+
@@ -44,7 +52,7 @@ A desktop application for creating serialized episodic stories through human-AI 
 **Storage:**
 - JSON files (local filesystem)
 
-## Prerequisites
+## 📋 Prerequisites
 
 1. **Python 3.10 or higher**
    ```bash
@@ -58,19 +66,22 @@ A desktop application for creating serialized episodic stories through human-AI 
 
 3. **Ollama** (for AI features)
    - Download from: https://ollama.ai
-   - Install and run: `ollama serve`
-   - Pull a model: `ollama pull llama3.2`
+   - Install and run:
+     ```bash
+     ollama serve
+     ```
+   - Pull a model:
+     ```bash
+     ollama pull llama3.2
+     ```
 
-## Installation
+## 🚀 Installation
 
-### 1. Clone/Download the Project
+### 1. Clone Repository
 
 ```bash
-# If using git
-git clone <repository-url>
-cd story-builder
-
-# Or extract the downloaded files
+git clone https://github.com/madbowman/story-generator.git
+cd story-generator
 ```
 
 ### 2. Backend Setup
@@ -100,7 +111,9 @@ cd frontend
 npm install
 ```
 
-## Running the Application
+## 🏃 Running the Application
+
+You need **3 terminals**:
 
 ### Terminal 1 - Backend Server
 
@@ -110,7 +123,7 @@ cd backend
 python app.py
 ```
 
-Backend will start on: `http://localhost:5000`
+✓ Backend will start on: `http://localhost:5000`
 
 ### Terminal 2 - Frontend Dev Server
 
@@ -119,15 +132,15 @@ cd frontend
 npm run dev
 ```
 
-Frontend will start on: `http://localhost:3000`
+✓ Frontend will start on: `http://localhost:3000`
 
-### Terminal 3 - Ollama (if not running)
+### Terminal 3 - Ollama
 
 ```bash
 ollama serve
 ```
 
-## Usage
+## 📖 Usage
 
 1. **Open your browser** to `http://localhost:3000`
 
@@ -143,7 +156,7 @@ ollama serve
 4. **Build Your World:**
    - Navigate to "World Builder" in the left sidebar
    - Fill in world overview details
-   - Add locations, characters, etc.
+   - Add locations, characters, factions, etc.
    - Use the AI Chat on the right to collaborate
 
 5. **Collaborate with AI:**
@@ -152,17 +165,30 @@ ollama serve
    - Adjust creativity with the temperature slider
    - Select different models from the dropdown
 
-## Project Structure
+6. **Validate Consistency:**
+   - Click "Check Consistency" button
+   - Review warnings and suggestions
+   - Fix any issues found
+
+## 📁 Project Structure
 
 ```
-story-builder/
+story-generator/
 ├── backend/
 │   ├── app.py                          # Flask application
 │   ├── requirements.txt                # Python dependencies
 │   └── modules/
-│       ├── project_manager.py          # Project CRUD operations
-│       └── ai_integration/
-│           └── ollama_client.py        # Ollama API client
+│       ├── __init__.py
+│       ├── ai_integration/
+│       │   ├── __init__.py
+│       │   └── ollama_client.py        # Ollama API client
+│       ├── world_builder/
+│       │   ├── __init__.py
+│       │   ├── project_manager.py      # Project CRUD
+│       │   └── world_builder.py        # World data management
+│       └── consistency/
+│           ├── __init__.py
+│           └── validator.py            # Consistency checking
 │
 ├── frontend/
 │   ├── package.json                    # Node dependencies
@@ -177,22 +203,34 @@ story-builder/
 │       ├── context/
 │       │   └── ProjectContext.jsx      # Project state management
 │       └── components/
-│           ├── AIStatus.jsx            # Ollama status indicator
+│           ├── AIStatus.jsx            # AI status indicator
 │           ├── ProjectSelector.jsx     # Project switcher
-│           ├── AIChat.jsx              # AI collaboration chat
+│           ├── AIChat.jsx              # AI chat interface
 │           └── WorldBuilder/
-│               └── WorldBuilder.jsx    # World building interface
+│               └── WorldBuilder.jsx    # World building UI
 │
 └── projects/                           # User projects (auto-created)
-    └── [project_name]/
+    └── [project_id]/
         ├── project_metadata.json
         ├── world/
+        │   ├── world_overview.json
+        │   ├── locations.json
+        │   ├── characters.json
+        │   ├── npcs.json
+        │   ├── factions.json
+        │   ├── religions.json
+        │   ├── glossary.json
+        │   └── content.json
         ├── story/
+        │   └── seasons/
         ├── state/
+        │   ├── current_state.json
+        │   └── timeline.json
         └── exports/
+            └── tts_scripts/
 ```
 
-## API Endpoints
+## 🔌 API Endpoints
 
 ### AI Endpoints
 - `GET /api/ai/status` - Check Ollama status
@@ -203,10 +241,20 @@ story-builder/
 ### Project Endpoints
 - `GET /api/projects` - List all projects
 - `POST /api/projects` - Create new project
-- `GET /api/projects/<name>` - Load project data
-- `POST /api/projects/<name>/save` - Save project file
+- `GET /api/projects/<id>` - Load project data
+- `DELETE /api/projects/<id>` - Delete project
 
-## Troubleshooting
+### World Building Endpoints
+- `GET /api/projects/<id>/world/<section>` - Get world section
+- `PUT /api/projects/<id>/world/<section>` - Update world section
+
+### Consistency Endpoints
+- `POST /api/projects/<id>/consistency/check` - Validate consistency
+
+### Health Check
+- `GET /api/health` - Backend health check
+
+## 🐛 Troubleshooting
 
 ### Ollama Not Connecting
 
@@ -224,7 +272,8 @@ story-builder/
 **Solutions:**
 1. Verify Python version: `python --version` (needs 3.10+)
 2. Activate virtual environment
-3. Reinstall dependencies: `pip install -r requirements.txt`
+3. Check if all `__init__.py` files exist in modules
+4. Reinstall dependencies: `pip install -r requirements.txt`
 
 ### Frontend Won't Start
 
@@ -232,7 +281,7 @@ story-builder/
 
 **Solutions:**
 1. Verify Node version: `node --version` (needs 18+)
-2. Delete `node_modules` and reinstall: 
+2. Delete `node_modules` and reinstall:
    ```bash
    rm -rf node_modules
    npm install
@@ -252,48 +301,110 @@ story-builder/
 1. Check `projects/` directory exists
 2. Check file permissions
 3. Look for errors in backend terminal
+4. Verify save status indicator in header
 
-## Development Notes
+### Import Errors
+
+**Problem:** `ModuleNotFoundError` when running backend
+
+**Solutions:**
+1. Make sure you're in the `backend/` directory
+2. Virtual environment is activated
+3. All `__init__.py` files exist in:
+   - `modules/`
+   - `modules/ai_integration/`
+   - `modules/world_builder/`
+   - `modules/consistency/`
+
+## 💾 Data Storage
 
 ### Auto-Save
 - Projects auto-save 30 seconds after changes
-- Manual save triggered by clicking save buttons
-- Save status shown in header (✓ Saved | ⏳ Saving... | ⚠ Error)
+- Manual save triggered by editing fields
+- Save status shown in header:
+  - ✓ Saved (green)
+  - ⏳ Saving... (yellow)
+  - ⚠ Error (red)
 
-### JSON Storage
+### JSON Files
 - All project data stored in `projects/` directory
-- Each project has its own folder
+- Each project has its own folder with unique ID
 - World, story, and state data in separate JSON files
-- Human-readable and easily backed up
+- Human-readable format - easy to backup or edit manually
+- No database required
 
-### Adding New Models
-1. Pull model with Ollama: `ollama pull <model-name>`
-2. Model will appear in AI Chat dropdown
-3. Select it to use for generation
+### File Structure
+Each project contains:
+- **project_metadata.json** - Title, genre, timestamps
+- **world/** - All world building data (8 files)
+- **story/** - Episodes and seasons (Phase 2)
+- **state/** - Current timeline and character positions
+- **exports/** - TTS scripts (Phase 2)
 
-## Next Steps (Phase 2+)
+## 🤖 Using Different AI Models
 
+1. List available models:
+   ```bash
+   ollama list
+   ```
+
+2. Pull a new model:
+   ```bash
+   ollama pull mistral
+   ollama pull codellama
+   ollama pull llama2
+   ```
+
+3. Model will appear in AI Chat dropdown
+4. Select it to use for generation
+5. Experiment with different models for different tasks
+
+## 🗺 Roadmap
+
+### Phase 2 - Episode Production (Next)
 - 🔲 Episode editor with draft/refinement workflow
 - 🔲 Season and arc management
 - 🔲 Context window management (3-episode + summaries)
-- 🔲 Consistency engine (travel time, character tracking)
-- 🔲 TTS script export
+- 🔲 Advanced consistency engine (travel time, character tracking)
+- 🔲 TTS script export for audio production
 - 🔲 Timeline visualization
-- 🔲 Batch operations
 
-## Support
+### Phase 3 - Polish & Features
+- 🔲 Batch operations
+- 🔲 Project templates
+- 🔲 Import/export capabilities
+- 🔲 Version history
+- 🔲 Advanced search and filtering
+
+## 📚 Additional Documentation
+
+- **QUICKSTART.md** - 5-minute getting started guide
+- **DEVELOPMENT_CHECKLIST.md** - Development progress tracker
+- **setup.sh** - Automated setup script (Mac/Linux)
+
+## 📞 Support
 
 For issues or questions:
-1. Check this README troubleshooting section
+1. Check the troubleshooting section above
 2. Review backend terminal for error messages
-3. Check browser console for frontend errors
-4. Verify Ollama is running properly
+3. Check browser console (F12) for frontend errors
+4. Verify all prerequisites are installed
+5. Make sure Ollama is running and has models
 
-## License
+## 🤝 Contributing
+
+Phase 1 is complete! If you'd like to contribute to Phase 2:
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Submit a pull request
+
+## 📄 License
 
 [Your License Here]
 
 ---
 
-**Version:** 1.0 (Phase 1 MVP)  
-**Last Updated:** 2025
+**Version:** 1.0 (Phase 1 MVP Complete ✅)  
+**Last Updated:** October 2025  
+**Status:** Production Ready
