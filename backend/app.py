@@ -4,8 +4,13 @@ Main application entry point
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
+from pathlib import Path
+
+# FIXED IMPORTS - removed 'backend.' prefix
 from modules.ai_integration.ollama_client import OllamaClient
-from backend.modules.world_builder.project_manager import ProjectManager
+from modules.world_builder.project_manager import ProjectManager
+from modules.world_builder.world_builder import WorldBuilder  # ADDED
+from modules.consistency.validator import ConsistencyValidator  # ADDED
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
@@ -13,6 +18,12 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 # Initialize managers
 ollama = OllamaClient()
 project_manager = ProjectManager()
+world_builder = WorldBuilder()  # ADDED
+consistency_validator = ConsistencyValidator()  # ADDED
+
+# ADDED: Setup projects directory
+PROJECTS_DIR = Path(__file__).parent.parent / 'projects'
+PROJECTS_DIR.mkdir(exist_ok=True)
 
 # ============================================================================
 # AI ENDPOINTS
@@ -94,8 +105,8 @@ def ai_chat():
 @app.route('/api/projects', methods=['GET'])
 def list_projects():
     """List all projects"""
-    projects = project_manager.list_projects()
-    return jsonify({"success": True, "projects": projects})
+    result = project_manager.list_projects(PROJECTS_DIR)  # FIXED: added PROJECTS_DIR
+    return jsonify(result)
 
 @app.route('/api/projects', methods=['POST'])
 def create_project():
@@ -114,9 +125,10 @@ def create_project():
         return jsonify({"success": False, "error": "Title is required"}), 400
     
     description = data.get('description', '')
-    genre = data.get('genre', '')
+    genre = data.get('genre', 'General')
     
     result = project_manager.create_project(
+        PROJECTS_DIR,  # FIXED: added PROJECTS_DIR
         title=title,
         description=description,
         genre=genre
@@ -127,42 +139,46 @@ def create_project():
     else:
         return jsonify(result), 400
 
-@app.route('/api/projects/<project_name>', methods=['GET'])
-def load_project(project_name):
+@app.route('/api/projects/<project_id>', methods=['GET'])
+def load_project(project_id):
     """Load project data"""
-    result = project_manager.load_project(project_name)
+    result = project_manager.load_project(PROJECTS_DIR, project_id)  # FIXED: added PROJECTS_DIR
     
-    if result['success']:
+    if result and result.get('success'):
         return jsonify(result)
     else:
-        return jsonify(result), 404
+        return jsonify({"success": False, "error": "Project not found"}), 404
 
-@app.route('/api/projects/<project_name>/save', methods=['POST'])
-def save_project_file(project_name):
-    """
-    Save data to project file
-    Body: {
-        "file_path": str (e.g., "world/characters.json"),
-        "data": dict
-    }
-    """
-    data = request.json
-    
-    file_path = data.get('file_path')
-    file_data = data.get('data')
-    
-    if not file_path or file_data is None:
-        return jsonify({
-            "success": False,
-            "error": "file_path and data are required"
-        }), 400
-    
-    result = project_manager.save_file(project_name, file_path, file_data)
-    
-    if result['success']:
+@app.route('/api/projects/<project_id>', methods=['DELETE'])
+def delete_project(project_id):
+    """Delete a project"""
+    result = project_manager.delete_project(PROJECTS_DIR, project_id)  # FIXED: added PROJECTS_DIR
+    return jsonify(result), 200 if result['success'] else 404
+
+# ADDED: World building endpoints
+@app.route('/api/projects/<project_id>/world/<section>', methods=['GET'])
+def get_world_section(project_id, section):
+    """Get specific world section"""
+    result = world_builder.get_section(PROJECTS_DIR, project_id, section)
+    if result:
         return jsonify(result)
-    else:
-        return jsonify(result), 400
+    return jsonify({'error': f'Section {section} not found'}), 404
+
+@app.route('/api/projects/<project_id>/world/<section>', methods=['PUT'])
+def update_world_section(project_id, section):
+    """Update world section"""
+    data = request.json
+    result = world_builder.update_section(PROJECTS_DIR, project_id, section, data)
+    return jsonify(result), 200 if result['success'] else 400
+
+# ADDED: Consistency check endpoint
+@app.route('/api/projects/<project_id>/consistency/check', methods=['POST'])
+def check_consistency(project_id):
+    """Run consistency validation"""
+    data = request.json
+    scope = data.get('scope', 'world')
+    result = consistency_validator.validate(PROJECTS_DIR, project_id, scope)
+    return jsonify(result)
 
 # ============================================================================
 # HEALTH CHECK
@@ -197,7 +213,7 @@ if __name__ == '__main__':
     print("Story Builder Backend Starting...")
     print("=" * 60)
     print(f"Backend API: http://localhost:5000")
-    print(f"Projects directory: {project_manager.projects_root}")
+    print(f"Projects directory: {PROJECTS_DIR}")
     print("=" * 60)
     
     # Check Ollama status on startup
