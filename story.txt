@@ -1,0 +1,700 @@
+# Story Builder - Program Manager Documentation
+
+**Version:** 2.0 Enhanced  
+**Document Type:** Program Management Specification  
+**Last Updated:** 2025  
+**Status:** Active Development
+
+---
+
+## Executive Summary
+
+Story Builder is a self-contained desktop application for creating serialized episodic stories through human-AI collaboration. The system enables a single user to develop multiple concurrent story projects (different genres, seasons, episodes) while maintaining narrative consistency, logical world-building constraints, and efficient context management for AI-assisted writing.
+
+### Primary Objectives
+- Enable collaborative story development between human writer and AI
+- Maintain logical consistency across episodes, seasons, and story worlds
+- Support multiple concurrent projects with different genres and timelines
+- Export production-ready TTS (Text-to-Speech) scripts for audio production
+- Eliminate need for external editors or file management
+
+---
+
+## 1. Program Overview
+
+### 1.1 Core Purpose
+Story Builder facilitates the creation of serialized narrative content (audiobook-style stories) where the user and AI collaborate through iterative dialogue to build coherent, consistent story worlds and episodes.
+
+### 1.2 Target User
+- **Primary User:** Solo writer/content creator
+- **Use Case:** Creating serialized audio fiction across multiple projects
+- **Technical Level:** Intermediate (comfortable with desktop applications, basic JSON concepts)
+- **Concurrent Projects:** Multiple (e.g., Sci-fi Season 2 Episode 5, Horror Season 1 Episode 3)
+
+### 1.3 Key Differentiators
+- **AI Collaboration:** Not just AI generation - true back-and-forth development
+- **Consistency Engine:** Automatic tracking of logical constraints (travel time, character locations, relationships)
+- **Context Management:** Smart summarization to keep AI prompts efficient
+- **Self-Contained Workflow:** No external tools needed until final export
+
+---
+
+## 2. System Architecture
+
+### 2.1 Application Type
+- **Platform:** Desktop application (Electron-based web app)
+- **Runtime:** Browser-based (HTML/CSS/JavaScript)
+- **AI Backend:** Local Ollama instance (default: llama3.2)
+- **Storage:** Local file system (JSON-based project files)
+
+### 2.2 Data Structure
+
+#### Project Organization
+```
+project_root/
+├── project_metadata.json          # Project title, description, created date
+├── world/
+│   ├── world_overview.json        # Core world building
+│   ├── locations.json             # Places, travel times, distances
+│   ├── factions.json              # Political groups, influence
+│   ├── religions.json             # Belief systems
+│   ├── characters.json            # Main cast
+│   ├── npcs.json                  # Supporting characters
+│   ├── glossary.json              # Terms, concepts
+│   └── content.json               # Items, hazards, machines
+├── story/
+│   ├── arcs.json                  # Story arcs across seasons
+│   └── seasons/
+│       ├── s01/
+│       │   ├── s01_metadata.json  # Season 1 info
+│       │   ├── s01_e01.json       # Episode 1
+│       │   ├── s01_e02.json       # Episode 2
+│       │   └── s01_summary.json   # Auto-generated summaries
+│       └── s02/
+│           └── ...
+├── state/
+│   ├── current_state.json         # Character positions, dates, resources
+│   └── timeline.json              # In-world chronology
+└── exports/
+    └── tts_scripts/               # Final TTS exports
+```
+
+#### File Size Management
+- **Modularity:** Each episode is separate file (max ~50KB per episode)
+- **Summaries:** Episodes beyond 3-episode context window are auto-summarized
+- **Archive:** Completed seasons can be archived but remain accessible
+
+### 2.3 Key Modules
+
+1. **World Builder Module**
+   - Collaborative world development interface
+   - Structured forms for cultures, politics, religions, environments
+   - AI assists with consistency and expansion
+
+2. **Story Arc Manager**
+   - Season-level arc planning
+   - Episode sequencing and dependencies
+
+3. **Episode Editor**
+   - Collaborative episode development
+   - Three-phase workflow: discuss → draft → refine
+
+4. **Consistency Engine**
+   - Validates travel times, character locations
+   - Tracks relationships and past events
+   - Alerts on logical inconsistencies
+
+5. **Context Manager**
+   - Maintains AI context window
+   - Auto-summarizes old episodes
+   - Provides relevant context for current work
+
+6. **Export System**
+   - TTS script generation (narration format)
+   - Project backup exports
+
+---
+
+## 3. Core Workflows
+
+### 3.1 New Project Creation Workflow
+
+**Phase 1: World Building** (Complete before episodes)
+1. User creates new project (title, description, genre)
+2. User and AI collaborate on world overview
+   - AI asks questions about world
+   - User provides answers and direction
+   - AI generates structured world data
+3. Build major world elements:
+   - **Geography:** Locations, distances, travel methods, climate
+   - **Politics:** Factions, power structures, conflicts
+   - **Religion:** Belief systems, practices, influence
+   - **Culture:** Social norms, technology level, economy
+   - **Characters:** Main cast with backgrounds, motivations
+   - **NPCs:** Supporting characters with roles
+4. User reviews and refines each element until satisfied
+5. AI validates internal consistency
+6. World is locked (can be refined but no convenient additions mid-story)
+
+**Phase 2: Story Arc Development**
+1. User and AI discuss season-level story arcs
+2. AI suggests arc structure, conflicts, resolutions
+3. User approves/modifies arc plan
+4. AI generates arc files with episode hints
+5. Episode sequence is established
+
+**Phase 3: Episode Production** (Iterative for each episode)
+1. **Discussion Phase:**
+   - User and AI discuss episode goals
+   - Identify featured characters, locations, conflicts
+   - Establish where episode fits in timeline
+   - Agree on key beats and outcomes
+2. **First Draft Phase:**
+   - AI generates full episode script (narration format)
+   - Uses: current world state + last 3 episodes + summaries of older episodes
+3. **Refinement Phase:**
+   - User edits in interface
+   - User and AI discuss changes
+   - AI suggests improvements
+   - Consistency engine validates logic
+   - Iterate until user satisfied
+4. **Finalization:**
+   - User marks episode complete
+   - AI auto-generates episode summary
+   - Timeline and state updated
+   - TTS script exported to project folder
+
+### 3.2 Project Switching Workflow
+1. User selects "Switch Project" from menu
+2. Current project auto-saves all changes
+3. User selects different project from list
+4. System loads new project context
+5. AI context resets to new project
+6. User resumes work (system remembers last edited episode/section)
+
+### 3.3 Consistency Checking Workflow
+
+**Automatic Checks (During Writing):**
+- Character location tracking
+- Travel time validation (NYC to Chicago = hours, not minutes)
+- Timeline coherence (Episode 5 can't occur before Episode 3)
+- Relationship continuity
+
+**On-Demand Checks (User Triggered):**
+- Full project consistency scan
+- Cross-episode validation
+- Character arc coherence
+- World rule adherence
+
+**When Inconsistency Detected:**
+1. AI alerts user with specific issue
+2. AI suggests fix options:
+   - Adjust timeline
+   - Change location
+   - Modify character action
+3. User chooses solution or overrides (with warning logged)
+4. Change propagates to affected episodes
+
+---
+
+## 4. AI Integration Specifications
+
+### 4.1 AI Configuration
+- **Default Model:** Ollama llama3.2 (local)
+- **Connection:** HTTP API to localhost:11434
+- **Fallback:** User can configure alternate models/endpoints
+- **Creativity Level:** Adjustable temperature (0.0-1.0, default 0.8)
+
+### 4.2 Context Window Management
+
+**Current Episode Context:**
+- Full world data (locations, factions, characters, rules)
+- Complete text of 3 most recent episodes
+- Auto-generated summaries of all earlier episodes
+- Current state data (positions, relationships, timeline)
+
+**Why 3 Episodes + Summaries?**
+- Keeps AI prompt under token limits
+- Maintains immediate continuity
+- Preserves long-term story memory through summaries
+
+**Summary Generation:**
+- Triggered automatically when episode marked complete
+- Captures: key events, character changes, location changes, new information
+- Format: Condensed structured data (~1/10th original size)
+- Stored in season summary file
+
+### 4.3 Collaboration Modes
+
+**Discussion Mode** (Pre-Draft)
+- AI asks clarifying questions
+- User provides direction and constraints
+- AI suggests plot options based on world rules
+- Goal: Align on episode direction before writing
+
+**Draft Mode**
+- AI generates full episode script
+- Format: Narration style (audiobook format)
+- Length: Target word count from episode metadata
+- No stage directions, pure narrative
+
+**Refinement Mode**
+- AI responds to user edits
+- Suggests alternative phrasings
+- Validates consistency during changes
+- Iterates based on user feedback
+
+---
+
+## 5. Data Model Specifications
+
+### 5.1 World Data Schema
+
+**world_overview.json**
+```json
+{
+  "name": "String",
+  "description": "String",
+  "timePeriod": "String",
+  "technologyLevel": "String",
+  "history": "String",
+  "rulesPhysics": "String"
+}
+```
+
+**locations.json**
+```json
+{
+  "places": [
+    {
+      "id": "String",
+      "name": "String",
+      "type": "String",
+      "coords": {"x": Number, "y": Number},
+      "description": "String"
+    }
+  ],
+  "routes": [
+    {
+      "from": "String (place_id)",
+      "to": "String (place_id)",
+      "mode": "String",
+      "distance_km": Number,
+      "travel_time_hours": Number
+    }
+  ]
+}
+```
+
+**characters.json**
+```json
+{
+  "characters": [
+    {
+      "id": "String",
+      "name": "String",
+      "role": "String",
+      "description": "String",
+      "personality": "String",
+      "backstory": "String",
+      "skills": ["String"],
+      "weaknesses": ["String"],
+      "relationships": [
+        {"character_id": "String", "type": "String", "status": "String"}
+      ]
+    }
+  ]
+}
+```
+
+### 5.2 Episode Data Schema
+
+**s01_e01.json**
+```json
+{
+  "id": "String",
+  "title": "String",
+  "season": Number,
+  "episode": Number,
+  "status": "outline|draft|revision|complete",
+  "created": "ISO DateTime",
+  "lastModified": "ISO DateTime",
+  "featuredCharacters": ["character_id"],
+  "locations": ["location_id"],
+  "arcs": ["arc_id"],
+  "timelineStart": "ISO DateTime (in-world)",
+  "timelineEnd": "ISO DateTime (in-world)",
+  "outline": ["String (bullet points)"],
+  "script": "String (full narration text)",
+  "summary": "String (auto-generated)",
+  "targetWordCount": Number,
+  "actualWordCount": Number
+}
+```
+
+### 5.3 State Tracking Schema
+
+**current_state.json**
+```json
+{
+  "lastUpdated": "ISO DateTime",
+  "currentDate": "String (in-world date)",
+  "characterPositions": {
+    "character_id": {
+      "location_id": "String",
+      "lastSeen": "episode_id"
+    }
+  },
+  "relationships": {
+    "character_id": {
+      "character_id": {
+        "status": "String",
+        "lastInteraction": "episode_id"
+      }
+    }
+  },
+  "resources": {
+    "resource_name": Number
+  },
+  "knownInformation": ["String (what characters know)"]
+}
+```
+
+---
+
+## 6. User Interface Specifications
+
+### 6.1 Main Interface Layout
+
+**Left Sidebar** (Navigation)
+- Project selector dropdown
+- World sections (expandable)
+  - Overview, Locations, Factions, Religions, Characters, NPCs
+- Story sections (expandable)
+  - Arcs
+  - Seasons > Episodes
+
+**Center Panel** (Editor)
+- Context-sensitive editor based on selected item
+- For episodes: Discussion chat + Draft editor
+- For world: Structured forms
+
+**Right Sidebar** (AI Collaboration)
+- Chat interface with AI
+- Context display (current episode info)
+- Consistency alerts
+- Quick actions (Suggest, Expand, Check)
+
+**Top Bar**
+- Project title
+- Save status indicator
+- AI connection status
+- Settings/Config
+
+### 6.2 Episode Editor Interface
+
+**Discussion Tab**
+- Chat-style interface
+- User and AI messages clearly distinguished
+- Quick prompts: "Suggest plot", "Check consistency", "Expand scene"
+
+**Draft Tab**
+- Full-text editor for episode script
+- Word count display
+- Auto-save indicator
+- Split view option (outline on left, script on right)
+
+**Timeline Tab**
+- Visual timeline showing episode in context
+- Character location map
+- Travel time validator
+
+### 6.3 Export Interface
+- Select episode(s) to export
+- Format: TTS Script (plain text narration)
+- Options: Single file or batch export
+- Output location: project/exports/tts_scripts/
+
+---
+
+## 7. TTS Export Specifications
+
+### 7.1 Format Requirements
+
+**Output Format:** Plain text, narration style
+
+**Structure:**
+```
+[Episode Title]
+Season X, Episode Y
+
+[Full narrative text in paragraphs]
+
+No character labels
+No stage directions
+No dialogue tags (incorporate into narration)
+Pure story narration suitable for single-voice TTS
+```
+
+**Example:**
+```
+The Broken Gate
+Season 1, Episode 3
+
+The morning mist clung to the valley like a shroud. Sarah made her way through the abandoned streets, her footsteps echoing off crumbling walls. She couldn't shake the feeling that someone was watching.
+
+Behind her, the sound of breaking glass shattered the silence. She spun around, heart pounding, but saw nothing. The city was playing tricks on her mind again.
+```
+
+### 7.2 11Labs Integration Considerations
+- Character voice consistency managed externally (not in 
+- Clean paragraph breaks for natural pacing
+- No special markup needed
+- File naming: `s01_e01_[episode_title].txt`
+
+---
+
+## 8. Technical Requirements
+
+### 8.1 System Requirements
+
+**User Machine:**
+- Windows 10/11, macOS 10.15+, or Linux
+- 8GB RAM minimum (16GB recommended)
+- 2GB free disk space per project
+- Internet connection (for AI model downloads only)
+
+**AI Backend:**
+- Ollama installed and running locally
+- Minimum 8GB RAM for llama3.2
+- GPU recommended but not required
+
+### 8.2 Performance Targets
+- Episode load time: <2 seconds
+- AI response time: 5-30 seconds (depending on prompt)
+- Auto-save frequency: Every 30 seconds of inactivity
+- Consistency check: <5 seconds per episode
+
+### 8.3 Data Limits
+- Maximum episodes per season: 100
+- Maximum seasons per project: 10
+- Maximum projects: Unlimited (disk space dependent)
+- Maximum episode script length: 50,000 words
+- AI context window: ~8,000 tokens (managed via summarization)
+
+---
+
+## 9. Quality Assurance Criteria
+
+### 9.1 Consistency Validation
+
+**Must Validate:**
+- Character cannot be in two places simultaneously
+- Travel time must be physically possible
+- Timeline events occur in logical sequence
+- Character knowledge is consistent with past episodes
+- Character relationships evolve logically
+
+**Must Alert On:**
+- Character location inconsistency
+- Impossible travel time
+- Contradictory information
+- Forgotten relationships
+- Ignored world rules
+
+### 9.2 User Acceptance Criteria
+
+**World Building Phase:**
+- [ ] User can collaboratively build world with AI
+- [ ] All world elements are editable and refinable
+- [ ] AI validates internal consistency
+- [ ] World can be locked to prevent convenient additions
+
+**Episode Production:**
+- [ ] User can discuss episode with AI before draft
+- [ ] AI generates complete episode script
+- [ ] User can edit draft with AI assistance
+- [ ] Consistency engine validates logic automatically
+- [ ] Episode can be marked complete
+
+**Project Management:**
+- [ ] User can create unlimited projects
+- [ ] User can switch between projects seamlessly
+- [ ] Each project maintains separate context
+- [ ] Auto-save prevents data loss
+
+**Export:**
+- [ ] TTS scripts export in correct format
+- [ ] Exported files are ready for 11Labs or similar
+- [ ] Batch export available for multiple episodes
+
+---
+
+## 10. Development Phases
+
+### Phase 1: Core Foundation (MVP)
+**Deliverables:**
+- Project creation and management
+- World building interface (basic forms)
+- AI chat integration with Ollama
+- Single episode editor
+- Manual consistency checking
+- Basic TTS export
+
+**Success Criteria:**
+- User can create world and write one episode with AI assistance
+
+### Phase 2: Multi-Episode Support
+**Deliverables:**
+- Season/episode organization
+- Context window management (3 episodes + summaries)
+- Auto-summarization system
+- Timeline tracking
+- Project switching
+
+**Success Criteria:**
+- User can work on multiple episodes across different projects
+
+### Phase 3: Advanced Consistency
+**Deliverables:**
+- Automatic consistency engine
+- Travel time validation
+- Character location tracking
+- Relationship tracking
+- Real-time alerts
+
+**Success Criteria:**
+- System catches logical inconsistencies automatically
+
+### Phase 4: Polish & Optimization
+**Deliverables:**
+- UI/UX improvements
+- Performance optimization
+- Batch operations
+- Advanced export options
+- Documentation
+
+**Success Criteria:**
+- Production-ready for content creation
+
+---
+
+## 11. Risk Assessment
+
+### High-Risk Items
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| AI context window limitations | Cannot maintain consistency | Auto-summarization + 3-episode window |
+| Data loss during crashes | User loses work | Aggressive auto-save (30s interval) + backups |
+| Ollama connection failures | Cannot use AI features | Offline mode + reconnection logic |
+| Inconsistent AI responses | Poor story quality | Temperature tuning + prompt engineering |
+
+### Medium-Risk Items
+| Risk | Impact | Mitigation |
+|------|--------|------------|
+| Large project file sizes | Performance degradation | Modular file structure + lazy loading |
+| Complex world rules | Hard to validate | Simple validation rules + user override |
+| User confusion with interface | Poor adoption | Clear workflow design + tooltips |
+
+---
+
+## 12. Success Metrics
+
+### Key Performance Indicators (KPIs)
+
+**Development Phase:**
+- Time to create first complete episode: <2 hours
+- AI response accuracy: >80% useful on first draft
+- Consistency check accuracy: >90% catch rate
+
+**Production Phase:**
+- Episodes completed per week: Target = 2-3
+- User satisfaction with AI collaboration: Target = 8/10
+- Zero critical data loss incidents
+
+### Quality Metrics
+- Logical consistency errors per episode: <2 (caught by system)
+- User manual consistency fixes: <5 per episode
+- TTS script export success rate: 100%
+
+---
+
+## 13. Future Enhancements (Post-MVP)
+
+**Potential Phase 5+ Features:**
+1. Character voice mapping for TTS systems
+2. Visual timeline/map interface
+3. Multi-user collaboration (real-time co-writing)
+4. Version control and episode history
+5. Export to additional formats (ePub, PDF)
+6. Integration with other AI models (GPT-4, Claude)
+7. Mobile companion app for reviewing
+8. Analytics dashboard (word count trends, productivity)
+
+---
+
+## 14. Glossary
+
+**Terms Used in This Document:**
+
+- **Consistency Engine:** Automated system that validates logical coherence across episodes
+- **Context Window:** The amount of story data provided to AI for generating responses
+- **Episode:** Single installment of a serialized story (typically 3,000-5,000 words)
+- **Modular:** File architecture where each component is separate and independently loadable
+- **Season:** Collection of episodes forming a story arc (typically 10-13 episodes)
+- **State:** Current status of story world (character positions, relationships, timeline)
+- **Summary:** Condensed version of an episode maintaining key plot points
+- **TTS Script:** Text formatted specifically for text-to-speech narration
+- **World Building:** Process of defining story universe rules, locations, cultures, etc.
+
+---
+
+## 15. Appendices
+
+### Appendix A: File Naming Conventions
+- Projects: `project_name. (root project file)
+- Episodes: `s##_e##.json` (season, episode zero-padded)
+- Exports: `s##_e##_[title].txt`
+
+### Appendix B: AI Prompt Templates
+(To be developed during implementation)
+
+### Appendix C: Sample Project Structure
+```
+atrium_and_ash.
+├── project_metadata.json
+├── world/
+│   ├── world_overview.json
+│   ├── locations.json (Verdancia, Kestrel Ford, Ember Gate...)
+│   ├── factions.json (Collegium, Stewards, Flow, Ascendants...)
+│   └── characters.json (Cassian, Dorian, Silas, Maris, Liora)
+├── story/
+│   └── seasons/
+│       └── s01/
+│           ├── s01_metadata.json
+│           ├── s01_e01.json (Baths and the Atrium)
+│           ├── s01_e02.json (Writ by Firelight)
+│           └── s01_summary.json
+└── exports/
+    └── tts_scripts/
+        ├── s01_e01_baths_and_the_atrium.txt
+        └── s01_e02_writ_by_firelight.txt
+```
+
+---
+
+## Document Control
+
+**Author:** Program Manager  
+**Reviewers:** Development Team, User (Content Creator)  
+**Approval:** Pending  
+**Next Review Date:** Upon completion of Phase 1 MVP  
+
+**Revision History:**
+| Version | Date | Author | Changes |
+|---------|------|--------|---------|
+| 1.0 | 2025-01 | PM | Initial document creation |
+
+---
+
+**END OF DOCUMENT**
