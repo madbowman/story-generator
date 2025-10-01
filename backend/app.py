@@ -5,10 +5,10 @@ Main application entry point
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from modules.ai_integration.ollama_client import OllamaClient
-from modules.project_manager import ProjectManager
+from backend.modules.world_builder.project_manager import ProjectManager
 
 app = Flask(__name__)
-CORS(app)  # Enable CORS for React frontend
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
 # Initialize managers
 ollama = OllamaClient()
