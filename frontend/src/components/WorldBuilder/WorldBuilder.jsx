@@ -224,302 +224,276 @@ const WorldOverview = ({ data, updateField }) => (
   </div>
 );
 
-// Locations Component
+// Small reusable List/Detail wrapper used by the different sections
+const ListDetail = (props) => {
+  const {
+    items = [],
+    itemLabel = (it, i) => `Item ${i + 1}`,
+    onAdd = () => {},
+    onRemove = () => {},
+    onUpdate = () => {},
+    renderItemEditor = () => null,
+    addLabel = '+ Add',
+    emptyMessage = 'No items yet.',
+    // when true: clicking an item hides the list and shows the detail full-width
+    detailOnlyOnSelect = false,
+    // when true: the View button will open the detail full-width (Back returns to list)
+    enableDetailView = true,
+    // optional title for the list pane
+    title = '',
+  } = props;
+
+  const [selected, setSelected] = React.useState(items && items.length ? 0 : -1);
+  const [viewMode, setViewMode] = React.useState(detailOnlyOnSelect ? 'list' : 'split');
+
+  React.useEffect(() => {
+    // If items change (add/remove), ensure selected index stays valid
+    if (!items || items.length === 0) {
+      setSelected(-1);
+    } else if (selected === -1 && items.length > 0) {
+      setSelected(0);
+    } else if (selected >= items.length) {
+      setSelected(items.length - 1);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items]);
+
+  const handleAdd = () => {
+    onAdd();
+    // select last after a short delay (the parent will add synchronously in this app)
+    setTimeout(() => {
+      const newIndex = (items || []).length;
+      setSelected(newIndex);
+      if (detailOnlyOnSelect) setViewMode('detail');
+    }, 50);
+  };
+
+  const handleRemove = (index) => {
+    onRemove(index);
+    // adjust selection
+    if (selected === index) {
+      setSelected(-1);
+      if (detailOnlyOnSelect) setViewMode('list');
+    } else if (selected > index) setSelected(selected - 1);
+  };
+
+  return (
+    <div style={styles.listDetail}>
+      {viewMode !== 'detail' && (
+        <div style={styles.listPane}>
+          <div style={styles.sectionHeader}>
+            <h2 style={styles.sectionTitle}>{title}</h2>
+            <button style={styles.addButton} onClick={handleAdd}>{addLabel}</button>
+          </div>
+
+          {(!items || items.length === 0) ? (
+            <div style={styles.emptyState}><p>{emptyMessage}</p></div>
+          ) : (
+            <div style={styles.itemList}>
+              {items.map((it, idx) => (
+                <div key={it.id || idx} style={{...styles.listItem, ...(selected === idx ? styles.listItemActive : {})}}>
+                  <div style={styles.listItemMain} onClick={() => { setSelected(idx); /* only enter detail mode on click if detailOnlyOnSelect */ if (detailOnlyOnSelect) setViewMode('detail'); }}>
+                    <div style={styles.listItemTitle}>{itemLabel(it, idx)}</div>
+                    <div style={styles.listItemSubtitle}>{(it.type || it.role || it.description || '').slice(0, 60)}</div>
+                  </div>
+                  <div style={styles.listItemActions}>
+                    <button style={styles.smallButton} onClick={() => { setSelected(idx); if (detailOnlyOnSelect || enableDetailView) setViewMode('detail'); }}>View</button>
+                    <button style={styles.removeButton} onClick={() => handleRemove(idx)}>Delete</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+  <div style={viewMode === 'detail' && (detailOnlyOnSelect || enableDetailView) ? styles.detailFullPane : styles.detailPane}>
+        {selected === -1 ? (
+          <div style={styles.emptyState}><p>Select an item to view or edit.</p></div>
+        ) : (
+          <div>
+            {(detailOnlyOnSelect || enableDetailView) && viewMode === 'detail' && (
+              <div style={{ marginBottom: '12px' }}>
+                <button style={styles.backButton} onClick={() => { setViewMode('list'); setSelected(-1); }}>← Back</button>
+              </div>
+            )}
+            {renderItemEditor(items[selected], selected, (field, value) => onUpdate(selected, field, value))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Locations Component (list/detail)
 const Locations = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Locations</h2>
-      <button style={styles.addButton} onClick={() => addItem('places')}>
-        + Add Location
-      </button>
-    </div>
+    <ListDetail
+      items={data.places || []}
+      itemLabel={(it, i) => it.name || `Location ${i + 1}`}
+      onAdd={() => addItem('places')}
+      onRemove={(index) => removeItem('places', index)}
+      onUpdate={(index, field, value) => updateItem('places', index, field, value)}
+      detailOnlyOnSelect={false}
+      enableDetailView={true}
+      title={'Locations'}
+      addLabel={'+ Add Location'}
+      emptyMessage={'No locations yet. Click "+ Add Location" to create one.'}
+      renderItemEditor={(place, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}>
+            <h3 style={styles.cardTitle}>{place.name || `Location ${index + 1}`}</h3>
+          </div>
 
-    {(data.places || []).map((place, index) => (
-      <div key={place.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>Location {index + 1}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('places', index)}>
-            Remove
-          </button>
-        </div>
-        
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input
-            style={styles.input}
-            value={place.name || ''}
-            onChange={(e) => updateItem('places', index, 'name', e.target.value)}
-            placeholder="Location name"
-          />
-        </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Name</label>
+            <input style={styles.input} value={place.name || ''} onChange={(e) => updateField('name', e.target.value)} placeholder="Location name" />
+          </div>
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Type</label>
-          <input
-            style={styles.input}
-            value={place.type || ''}
-            onChange={(e) => updateItem('places', index, 'type', e.target.value)}
-            placeholder="e.g., City, Forest, Mountain"
-          />
-        </div>
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Type</label>
+            <input style={styles.input} value={place.type || ''} onChange={(e) => updateField('type', e.target.value)} placeholder="e.g., City, Forest, Mountain" />
+          </div>
 
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea
-            style={styles.textarea}
-            value={place.description || ''}
-            onChange={(e) => updateItem('places', index, 'description', e.target.value)}
-            placeholder="Describe this location"
-            rows="3"
-          />
+          <div style={styles.formGroup}>
+            <label style={styles.label}>Description</label>
+            <textarea style={styles.textarea} value={place.description || ''} onChange={(e) => updateField('description', e.target.value)} placeholder="Describe this location" rows="4" />
+          </div>
         </div>
-      </div>
-    ))}
-
-    {(!data.places || data.places.length === 0) && (
-      <div style={styles.emptyState}>
-        <p>No locations yet. Click "+ Add Location" to create one.</p>
-      </div>
-    )}
+      )}
+    />
   </div>
 );
 
-// Characters Component
 const Characters = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Main Characters</h2>
-      <button style={styles.addButton} onClick={() => addItem('characters')}>
-        + Add Character
-      </button>
-    </div>
-
-    {(data.characters || []).map((char, index) => (
-      <div key={char.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{char.name || `Character ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('characters', index)}>
-            Remove
-          </button>
+    <ListDetail
+      items={data.characters || []}
+      itemLabel={(it, i) => it.name || `Character ${i + 1}`}
+      onAdd={() => addItem('characters')}
+      onRemove={(index) => removeItem('characters', index)}
+      onUpdate={(index, field, value) => updateItem('characters', index, field, value)}
+      addLabel={'+ Add Character'}
+      emptyMessage={'No characters yet. Click "+ Add Character" to create one.'}
+      renderItemEditor={(char, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{char.name || `Character ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Name</label><input style={styles.input} value={char.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Role</label><input style={styles.input} value={char.role || ''} onChange={(e) => updateField('role', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Description</label><textarea style={styles.textarea} value={char.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="2" /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Personality</label><textarea style={styles.textarea} value={char.personality || ''} onChange={(e) => updateField('personality', e.target.value)} rows="2" /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Backstory</label><textarea style={styles.textarea} value={char.backstory || ''} onChange={(e) => updateField('backstory', e.target.value)} rows="3" /></div>
         </div>
-        
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input
-            style={styles.input}
-            value={char.name || ''}
-            onChange={(e) => updateItem('characters', index, 'name', e.target.value)}
-            placeholder="Character name"
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Role</label>
-          <input
-            style={styles.input}
-            value={char.role || ''}
-            onChange={(e) => updateItem('characters', index, 'role', e.target.value)}
-            placeholder="e.g., Protagonist, Antagonist, Mentor"
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea
-            style={styles.textarea}
-            value={char.description || ''}
-            onChange={(e) => updateItem('characters', index, 'description', e.target.value)}
-            placeholder="Physical description"
-            rows="2"
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Personality</label>
-          <textarea
-            style={styles.textarea}
-            value={char.personality || ''}
-            onChange={(e) => updateItem('characters', index, 'personality', e.target.value)}
-            placeholder="Personality traits"
-            rows="2"
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Backstory</label>
-          <textarea
-            style={styles.textarea}
-            value={char.backstory || ''}
-            onChange={(e) => updateItem('characters', index, 'backstory', e.target.value)}
-            placeholder="Character's history"
-            rows="3"
-          />
-        </div>
-      </div>
-    ))}
-
-    {(!data.characters || data.characters.length === 0) && (
-      <div style={styles.emptyState}>
-        <p>No characters yet. Click "+ Add Character" to create one.</p>
-      </div>
-    )}
+      )}
+    />
   </div>
 );
 
-// NPCs Component (similar to Characters)
 const NPCs = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>NPCs (Supporting Characters)</h2>
-      <button style={styles.addButton} onClick={() => addItem('npcs')}>
-        + Add NPC
-      </button>
-    </div>
-
-    {(data.npcs || []).map((npc, index) => (
-      <div key={npc.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{npc.name || `NPC ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('npcs', index)}>
-            Remove
-          </button>
+    <ListDetail
+      items={data.npcs || []}
+      itemLabel={(it, i) => it.name || `NPC ${i + 1}`}
+      onAdd={() => addItem('npcs')}
+      onRemove={(index) => removeItem('npcs', index)}
+      onUpdate={(index, field, value) => updateItem('npcs', index, field, value)}
+      detailOnlyOnSelect={false}
+      enableDetailView={true}
+      addLabel={'+ Add NPC'}
+      emptyMessage={'No NPCs yet. Click "+ Add NPC" to create one.'}
+      renderItemEditor={(npc, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{npc.name || `NPC ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Name</label><input style={styles.input} value={npc.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Description</label><textarea style={styles.textarea} value={npc.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="3" /></div>
         </div>
-        
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input
-            style={styles.input}
-            value={npc.name || ''}
-            onChange={(e) => updateItem('npcs', index, 'name', e.target.value)}
-            placeholder="NPC name"
-          />
-        </div>
-
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea
-            style={styles.textarea}
-            value={npc.description || ''}
-            onChange={(e) => updateItem('npcs', index, 'description', e.target.value)}
-            placeholder="Describe this NPC"
-            rows="3"
-          />
-        </div>
-      </div>
-    ))}
-
-    {(!data.npcs || data.npcs.length === 0) && (
-      <div style={styles.emptyState}>
-        <p>No NPCs yet. Click "+ Add NPC" to create one.</p>
-      </div>
-    )}
+      )}
+    />
   </div>
 );
 
 // Factions, Religions, Glossary, Content components (simplified versions)
 const Factions = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Factions</h2>
-      <button style={styles.addButton} onClick={() => addItem('factions')}>
-        + Add Faction
-      </button>
-    </div>
-    {(data.factions || []).map((faction, index) => (
-      <div key={faction.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{faction.name || `Faction ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('factions', index)}>Remove</button>
+    <ListDetail
+      items={data.factions || []}
+      itemLabel={(it, i) => it.name || `Faction ${i + 1}`}
+      onAdd={() => addItem('factions')}
+      onRemove={(index) => removeItem('factions', index)}
+      onUpdate={(index, field, value) => updateItem('factions', index, field, value)}
+      addLabel={'+ Add Faction'}
+      emptyMessage={'No factions yet.'}
+      renderItemEditor={(faction, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{faction.name || `Faction ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Name</label><input style={styles.input} value={faction.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Description</label><textarea style={styles.textarea} value={faction.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="3" /></div>
         </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input style={styles.input} value={faction.name || ''} onChange={(e) => updateItem('factions', index, 'name', e.target.value)} />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea style={styles.textarea} value={faction.description || ''} onChange={(e) => updateItem('factions', index, 'description', e.target.value)} rows="3" />
-        </div>
-      </div>
-    ))}
-    {(!data.factions || data.factions.length === 0) && <div style={styles.emptyState}><p>No factions yet.</p></div>}
+      )}
+    />
   </div>
 );
 
 const Religions = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Religions</h2>
-      <button style={styles.addButton} onClick={() => addItem('religions')}>+ Add Religion</button>
-    </div>
-    {(data.religions || []).map((religion, index) => (
-      <div key={religion.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{religion.name || `Religion ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('religions', index)}>Remove</button>
+    <ListDetail
+      items={data.religions || []}
+      itemLabel={(it, i) => it.name || `Religion ${i + 1}`}
+      onAdd={() => addItem('religions')}
+      onRemove={(index) => removeItem('religions', index)}
+      onUpdate={(index, field, value) => updateItem('religions', index, field, value)}
+      addLabel={'+ Add Religion'}
+      emptyMessage={'No religions yet.'}
+      renderItemEditor={(religion, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{religion.name || `Religion ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Name</label><input style={styles.input} value={religion.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Description</label><textarea style={styles.textarea} value={religion.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="3" /></div>
         </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input style={styles.input} value={religion.name || ''} onChange={(e) => updateItem('religions', index, 'name', e.target.value)} />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea style={styles.textarea} value={religion.description || ''} onChange={(e) => updateItem('religions', index, 'description', e.target.value)} rows="3" />
-        </div>
-      </div>
-    ))}
-    {(!data.religions || data.religions.length === 0) && <div style={styles.emptyState}><p>No religions yet.</p></div>}
+      )}
+    />
   </div>
 );
 
 const Glossary = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Glossary</h2>
-      <button style={styles.addButton} onClick={() => addItem('terms')}>+ Add Term</button>
-    </div>
-    {(data.terms || []).map((term, index) => (
-      <div key={term.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{term.name || `Term ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('terms', index)}>Remove</button>
+    <ListDetail
+      items={data.terms || []}
+      itemLabel={(it, i) => it.name || `Term ${i + 1}`}
+      onAdd={() => addItem('terms')}
+      onRemove={(index) => removeItem('terms', index)}
+      onUpdate={(index, field, value) => updateItem('terms', index, field, value)}
+      addLabel={'+ Add Term'}
+      emptyMessage={'No terms yet.'}
+      renderItemEditor={(term, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{term.name || `Term ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Term</label><input style={styles.input} value={term.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Definition</label><textarea style={styles.textarea} value={term.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="2" /></div>
         </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Term</label>
-          <input style={styles.input} value={term.name || ''} onChange={(e) => updateItem('terms', index, 'name', e.target.value)} />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Definition</label>
-          <textarea style={styles.textarea} value={term.description || ''} onChange={(e) => updateItem('terms', index, 'description', e.target.value)} rows="2" />
-        </div>
-      </div>
-    ))}
-    {(!data.terms || data.terms.length === 0) && <div style={styles.emptyState}><p>No terms yet.</p></div>}
+      )}
+    />
   </div>
 );
 
 const Content = ({ data, addItem, updateItem, removeItem }) => (
   <div style={styles.form}>
-    <div style={styles.sectionHeader}>
-      <h2 style={styles.sectionTitle}>Items & Hazards</h2>
-      <button style={styles.addButton} onClick={() => addItem('items')}>+ Add Item</button>
-    </div>
-    {(data.items || []).map((item, index) => (
-      <div key={item.id} style={styles.card}>
-        <div style={styles.cardHeader}>
-          <h3 style={styles.cardTitle}>{item.name || `Item ${index + 1}`}</h3>
-          <button style={styles.removeButton} onClick={() => removeItem('items', index)}>Remove</button>
+    <ListDetail
+      items={data.items || []}
+      itemLabel={(it, i) => it.name || `Item ${i + 1}`}
+      onAdd={() => addItem('items')}
+      onRemove={(index) => removeItem('items', index)}
+      onUpdate={(index, field, value) => updateItem('items', index, field, value)}
+      addLabel={'+ Add Item'}
+      emptyMessage={'No items yet.'}
+      renderItemEditor={(item, index, updateField) => (
+        <div style={styles.card}>
+          <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{item.name || `Item ${index + 1}`}</h3></div>
+          <div style={styles.formGroup}><label style={styles.label}>Name</label><input style={styles.input} value={item.name || ''} onChange={(e) => updateField('name', e.target.value)} /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Description</label><textarea style={styles.textarea} value={item.description || ''} onChange={(e) => updateField('description', e.target.value)} rows="2" /></div>
         </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Name</label>
-          <input style={styles.input} value={item.name || ''} onChange={(e) => updateItem('items', index, 'name', e.target.value)} />
-        </div>
-        <div style={styles.formGroup}>
-          <label style={styles.label}>Description</label>
-          <textarea style={styles.textarea} value={item.description || ''} onChange={(e) => updateItem('items', index, 'description', e.target.value)} rows="2" />
-        </div>
-      </div>
-    ))}
-    {(!data.items || data.items.length === 0) && <div style={styles.emptyState}><p>No items yet.</p></div>}
+      )}
+    />
   </div>
 );
 
@@ -668,6 +642,81 @@ const styles = {
     padding: '40px',
     textAlign: 'center',
     color: '#888',
+  },
+  itemList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+  },
+  listDetail: {
+    display: 'flex',
+    gap: '20px',
+    alignItems: 'stretch',
+  },
+  listPane: {
+    width: '320px',
+    minWidth: '260px',
+    maxHeight: '70vh',
+    overflow: 'auto',
+  },
+  detailPane: {
+    flex: 1,
+    minWidth: '320px',
+  },
+  listItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '10px',
+    borderRadius: '6px',
+    background: '#111',
+    border: '1px solid #2a2a2a',
+    cursor: 'pointer',
+  },
+  listItemActive: {
+    background: '#172554',
+    borderColor: '#3b82f6',
+  },
+  listItemMain: {
+    flex: 1,
+    paddingRight: '8px',
+  },
+  listItemTitle: {
+    color: '#fff',
+    fontSize: '14px',
+    fontWeight: '600',
+  },
+  listItemSubtitle: {
+    color: '#9ca3af',
+    fontSize: '12px',
+    marginTop: '4px',
+  },
+  listItemActions: {
+    display: 'flex',
+    gap: '8px',
+    alignItems: 'center',
+  },
+  smallButton: {
+    padding: '6px 10px',
+    background: '#3b82f6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer',
+    fontSize: '12px',
+  },
+  detailFullPane: {
+    flex: 1,
+    minWidth: '320px',
+    maxWidth: '100%'
+  },
+  backButton: {
+    padding: '8px 12px',
+    background: 'transparent',
+    color: '#cbd5e1',
+    border: '1px solid #475569',
+    borderRadius: '6px',
+    cursor: 'pointer',
   },
   empty: {
     flex: 1,
