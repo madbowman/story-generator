@@ -140,6 +140,16 @@ npm run dev
 ollama serve
 ```
 
+### Windows Users with Docker Desktop
+
+If you get "This site can't be reached" on `http://localhost:3000`, ensure `vite.config.js` has:
+```javascript
+server: {
+  host: '0.0.0.0',
+  port: 3000,
+  // ...
+}
+
 ## 📖 Usage
 
 1. **Open your browser** to `http://localhost:3000`
