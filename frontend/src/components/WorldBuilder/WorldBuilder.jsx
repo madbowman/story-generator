@@ -18,6 +18,8 @@ const WorldBuilder = () => {
   const [worldData, setWorldData] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [saveMessage, setSaveMessage] = useState('');
+  const [saveError, setSaveError] = useState('');
 
   const sections = [
     { id: 'world_overview', label: 'World Overview', icon: '🌍' },
@@ -52,11 +54,15 @@ const WorldBuilder = () => {
 
   const saveSection = async () => {
     setSaving(true);
+    setSaveMessage('');
+    setSaveError('');
     try {
       await api.put(`/projects/${currentProject}/world/${activeSection}`, worldData);
-      alert('Saved successfully!');
+      setSaveMessage('Saved successfully');
+      setTimeout(() => setSaveMessage(''), 3000);
     } catch (error) {
-      alert('Failed to save: ' + error.message);
+      setSaveError('Failed to save: ' + (error.message || 'unknown error'));
+      setTimeout(() => setSaveError(''), 5000);
     } finally {
       setSaving(false);
     }
@@ -158,6 +164,8 @@ const WorldBuilder = () => {
           <button style={styles.saveButton} onClick={saveSection} disabled={saving}>
             {saving ? 'Saving...' : 'Save Changes'}
           </button>
+          {saveMessage && <span style={styles.saveMessage}>{saveMessage}</span>}
+          {saveError && <span style={styles.saveError}>{saveError}</span>}
         </div>
       </div>
     </div>
