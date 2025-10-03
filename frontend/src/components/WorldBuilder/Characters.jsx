@@ -10,6 +10,7 @@ const Characters = ({ data, addItem, updateItem, removeItem }) => (
       onAdd={() => addItem('characters')}
       onRemove={(index) => removeItem('characters', index)}
       onUpdate={(index, field, value) => updateItem('characters', index, field, value)}
+      title={'Characters'}
       addLabel={'+ Add Character'}
       emptyMessage={'No characters yet. Click "+ Add Character" to create one.'}
       renderItemEditor={(char, index, updateField) => (

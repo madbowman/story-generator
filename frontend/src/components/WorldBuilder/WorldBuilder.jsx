@@ -12,9 +12,11 @@ import Glossary from './Glossary';
 import Content from './Content';
 import styles from './styles';
 
-const WorldBuilder = () => {
+const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: propSetActiveSection }) => {
   const { currentProject } = useProject();
-  const [activeSection, setActiveSection] = useState('world_overview');
+  const [internalSection, setInternalSection] = useState('world_overview');
+  const activeSection = propActiveSection || internalSection;
+  const setActiveSection = propSetActiveSection || setInternalSection;
   const [worldData, setWorldData] = useState({});
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -109,24 +111,6 @@ const WorldBuilder = () => {
 
   return (
     <div style={styles.container}>
-      {/* Section Tabs */}
-      <div style={styles.tabs}>
-        {sections.map(section => (
-          <button
-            key={section.id}
-            style={{
-              ...styles.tab,
-              ...(activeSection === section.id ? styles.tabActive : {})
-            }}
-            onClick={() => setActiveSection(section.id)}
-          >
-            <span style={styles.tabIcon}>{section.icon}</span>
-            <span>{section.label}</span>
-          </button>
-        ))}
-      </div>
-
-      {/* Content Area */}
       <div style={styles.content}>
         {loading ? (
           <div style={styles.loading}>Loading...</div>

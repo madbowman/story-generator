@@ -1,7 +1,7 @@
 const styles = {
   container: {
     display: 'flex',
-    flexDirection: 'column',
+    flexDirection: 'row',
     height: '100%',
     background: '#0a0a0a',
   },
@@ -34,10 +34,48 @@ const styles = {
   tabIcon: {
     fontSize: '18px',
   },
+  sidebar: {
+    width: '220px',
+    minWidth: '180px',
+    background: '#0f1724',
+    borderRight: '1px solid #233240',
+    padding: '12px',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  sidebarHeader: {
+    marginBottom: '8px',
+  },
+  sidebarMenu: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+  },
+  sidebarItem: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '10px 12px',
+    background: 'transparent',
+    color: '#cbd5e1',
+    border: 'none',
+    borderRadius: '6px',
+    textAlign: 'left',
+    cursor: 'pointer',
+  },
+  sidebarItemActive: {
+    background: '#12243a',
+    color: '#fff',
+  },
+  sidebarIcon: {
+    width: '20px',
+    textAlign: 'center',
+  },
   content: {
     flex: 1,
     overflow: 'auto',
     padding: '24px',
+    minHeight: '0',
   },
   form: {
     maxWidth: '800px',

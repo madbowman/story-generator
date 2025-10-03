@@ -10,6 +10,7 @@ const Content = ({ data, addItem, updateItem, removeItem }) => (
       onAdd={() => addItem('items')}
       onRemove={(index) => removeItem('items', index)}
       onUpdate={(index, field, value) => updateItem('items', index, field, value)}
+      title={'Items & Hazards'}
       addLabel={'+ Add Item'}
       emptyMessage={'No items yet.'}
       renderItemEditor={(item, index, updateField) => (

@@ -10,6 +10,7 @@ const Glossary = ({ data, addItem, updateItem, removeItem }) => (
       onAdd={() => addItem('terms')}
       onRemove={(index) => removeItem('terms', index)}
       onUpdate={(index, field, value) => updateItem('terms', index, field, value)}
+      title={'Glossary'}
       addLabel={'+ Add Term'}
       emptyMessage={'No terms yet.'}
       renderItemEditor={(term, index, updateField) => (

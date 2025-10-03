@@ -19,6 +19,60 @@ function App() {
 function MainApp() {
   const { currentProject, projectData, saveStatus } = useProject();
   const [activeView, setActiveView] = useState('world');
+  const [activeSection, setActiveSection] = useState('world_overview');
+  const [worldSubmenuOpen, setWorldSubmenuOpen] = useState(() => {
+    try {
+      const v = localStorage.getItem('worldSubmenuOpen');
+      return v === null ? true : v === 'true';
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const toggleWorldSubmenu = () => {
+    setWorldSubmenuOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('worldSubmenuOpen', next ? 'true' : 'false'); } catch (e) {}
+      return next;
+    });
+  };
+
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      const v = localStorage.getItem('sidebarCollapsed');
+      return v === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('sidebarCollapsed', next ? 'true' : 'false'); } catch (e) {}
+      return next;
+    });
+  };
+
+  const handleWorldNavClick = () => {
+    if (activeView !== 'world') {
+      setActiveView('world');
+      setWorldSubmenuOpen(true);
+      try { localStorage.setItem('worldSubmenuOpen', 'true'); } catch (e) {}
+    } else {
+      toggleWorldSubmenu();
+    }
+  };
+  const sections = [
+    { id: 'world_overview', label: 'World Overview', icon: '🌍' },
+    { id: 'locations', label: 'Locations', icon: '📍' },
+    { id: 'characters', label: 'Characters', icon: '👤' },
+    { id: 'npcs', label: 'NPCs', icon: '👥' },
+    { id: 'factions', label: 'Factions', icon: '⚔️' },
+    { id: 'religions', label: 'Religions', icon: '✨' },
+    { id: 'glossary', label: 'Glossary', icon: '📖' },
+    { id: 'content', label: 'Items & Hazards', icon: '🎒' },
+  ];
 
   return (
     <div style={styles.app}>
@@ -45,14 +99,48 @@ function MainApp() {
           <>
             {/* Left Sidebar - Navigation */}
             <aside style={styles.sidebar}>
+              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px' }}>
+                <button style={styles.sidebarCollapseButton} onClick={toggleSidebarCollapsed} aria-pressed={sidebarCollapsed} aria-label="Collapse sidebar">
+                  {sidebarCollapsed ? 'Expand' : 'Collapse'}
+                </button>
+              </div>
               <nav style={styles.nav}>
                 <h3 style={styles.navTitle}>Project</h3>
-                <NavButton
-                  label="World Builder"
-                  icon="🌍"
-                  active={activeView === 'world'}
-                  onClick={() => setActiveView('world')}
-                />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  <NavButton
+                    label="World Builder"
+                    icon="🌍"
+                    active={activeView === 'world'}
+                    onClick={handleWorldNavClick}
+                  />
+                  <button
+                    style={styles.navToggle}
+                    onClick={toggleWorldSubmenu}
+                    aria-expanded={worldSubmenuOpen}
+                    aria-label="Toggle World Builder submenu"
+                  >
+                    {worldSubmenuOpen ? '▾' : '▸'}
+                  </button>
+                </div>
+                {activeView === 'world' && worldSubmenuOpen && (
+                  <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
+                    {sections.map((section) => (
+                      <button
+                        key={section.id}
+                        style={{
+                          ...styles.navButton,
+                          ...(activeSection === section.id ? styles.navButtonActive : {}),
+                          paddingLeft: '28px',
+                          fontSize: '13px'
+                        }}
+                        onClick={() => setActiveSection(section.id)}
+                      >
+                        <span style={styles.navIcon}>{section.icon}</span>
+                        <span>{section.label}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
                 <NavButton
                   label="Story Arcs"
                   icon="📚"
@@ -93,15 +181,17 @@ function MainApp() {
             </aside>
 
             {/* Center Panel - Main Editor */}
-            <main style={styles.centerPanel}>
-              {activeView === 'world' && <WorldBuilder />}
-              {activeView === 'arcs' && <PlaceholderView title="Story Arcs" />}
-              {activeView === 'episodes' && <PlaceholderView title="Episodes" />}
-              {activeView === 'export' && <PlaceholderView title="Export" />}
-            </main>
+            {(activeView !== 'world' || worldSubmenuOpen) ? (
+              <main style={styles.centerPanel}>
+                {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
+                {activeView === 'arcs' && <PlaceholderView title="Story Arcs" />}
+                {activeView === 'episodes' && <PlaceholderView title="Episodes" />}
+                {activeView === 'export' && <PlaceholderView title="Export" />}
+              </main>
+            ) : null}
 
-            {/* Right Sidebar - AI Chat */}
-            <aside style={styles.rightSidebar}>
+            {/* Right Sidebar - AI Chat (expand when center is hidden) */}
+            <aside style={(activeView === 'world' && !worldSubmenuOpen) ? styles.rightSidebarExpanded : styles.rightSidebar}>
               <AIChat context={projectData} />
             </aside>
           </>
@@ -282,6 +372,14 @@ const styles = {
   navIcon: {
     fontSize: '18px',
   },
+  navToggle: {
+    background: 'transparent',
+    border: 'none',
+    color: '#aaa',
+    cursor: 'pointer',
+    padding: '6px',
+    borderRadius: '4px',
+  },
   projectInfo: {
     padding: '20px',
     flex: 1,
@@ -319,6 +417,21 @@ const styles = {
     borderLeft: '1px solid #333',
     display: 'flex',
     flexDirection: 'column',
+  },
+  rightSidebarExpanded: {
+    width: 'calc(100% - 250px)',
+    backgroundColor: '#1a1a1a',
+    borderLeft: '1px solid #333',
+    display: 'flex',
+    flexDirection: 'column',
+  },
+  sidebarCollapseButton: {
+    background: 'transparent',
+    border: '1px solid #333',
+    color: '#cbd5e1',
+    padding: '6px 10px',
+    borderRadius: '6px',
+    cursor: 'pointer',
   },
   welcome: {
     flex: 1,

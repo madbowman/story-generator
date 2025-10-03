@@ -10,6 +10,7 @@ const Religions = ({ data, addItem, updateItem, removeItem }) => (
       onAdd={() => addItem('religions')}
       onRemove={(index) => removeItem('religions', index)}
       onUpdate={(index, field, value) => updateItem('religions', index, field, value)}
+      title={'Religions'}
       addLabel={'+ Add Religion'}
       emptyMessage={'No religions yet.'}
       renderItemEditor={(religion, index, updateField) => (

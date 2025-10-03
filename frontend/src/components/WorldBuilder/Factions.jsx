@@ -10,6 +10,7 @@ const Factions = ({ data, addItem, updateItem, removeItem }) => (
       onAdd={() => addItem('factions')}
       onRemove={(index) => removeItem('factions', index)}
       onUpdate={(index, field, value) => updateItem('factions', index, field, value)}
+      title={'Factions'}
       addLabel={'+ Add Faction'}
       emptyMessage={'No factions yet.'}
       renderItemEditor={(faction, index, updateField) => (

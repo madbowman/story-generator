@@ -12,6 +12,7 @@ const NPCs = ({ data, addItem, updateItem, removeItem }) => (
       onUpdate={(index, field, value) => updateItem('npcs', index, field, value)}
       detailOnlyOnSelect={false}
       enableDetailView={true}
+      title={'NPCs'}
       addLabel={'+ Add NPC'}
       emptyMessage={'No NPCs yet. Click "+ Add NPC" to create one.'}
       renderItemEditor={(npc, index, updateField) => (
