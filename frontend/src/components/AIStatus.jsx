@@ -5,7 +5,7 @@
 import { useState, useEffect } from 'react';
 import { aiService } from '../services/api';
 
-export default function AIStatus() {
+export default function AIStatus({ selectedModel, setSelectedModel }) {
   const [status, setStatus] = useState({ running: false, error: null });
   const [models, setModels] = useState([]);
   const [checking, setChecking] = useState(true);
@@ -21,6 +21,10 @@ export default function AIStatus() {
         const modelsResult = await aiService.listModels();
         if (modelsResult.success) {
           setModels(modelsResult.models);
+          // If no model is selected yet, pick the first returned model
+          if (!selectedModel && modelsResult.models && modelsResult.models.length > 0 && setSelectedModel) {
+            setSelectedModel(modelsResult.models[0]);
+          }
         }
       }
     } catch (error) {
@@ -57,11 +61,20 @@ export default function AIStatus() {
       {status.running && models.length > 0 && (
         <div style={styles.modelsRow}>
           <span style={styles.label}>Models:</span>
-          <select style={styles.modelSelect}>
-            {models.map(model => (
-              <option key={model} value={model}>{model}</option>
-            ))}
-          </select>
+          {setSelectedModel ? (
+            <select
+              style={styles.modelSelect}
+              value={selectedModel || ''}
+              onChange={(e) => setSelectedModel(e.target.value)}
+              title="AI Model"
+            >
+              {models.map(model => (
+                <option key={model} value={model}>{model}</option>
+              ))}
+            </select>
+          ) : (
+            <span style={{ color: '#ccc', fontSize: '13px' }}>{selectedModel || models[0]}</span>
+          )}
         </div>
       )}
     </div>

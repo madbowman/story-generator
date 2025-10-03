@@ -21,6 +21,19 @@ function MainApp() {
   const { currentProject, projectData, saveStatus } = useProject();
   const [activeView, setActiveView] = useState('world-chat');
   const [activeSection, setActiveSection] = useState('world_overview');
+  const [selectedModel, setSelectedModel] = useState(() => {
+    try {
+      const v = localStorage.getItem('selectedModel');
+      return v || null;
+    } catch (e) {
+      return null;
+    }
+  });
+
+  const handleSetSelectedModel = (model) => {
+    setSelectedModel(model);
+    try { localStorage.setItem('selectedModel', model); } catch (e) {}
+  };
   const [worldSubmenuOpen, setWorldSubmenuOpen] = useState(() => {
     try {
       const v = localStorage.getItem('worldSubmenuOpen');
@@ -38,22 +51,7 @@ function MainApp() {
     });
   };
 
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
-    try {
-      const v = localStorage.getItem('sidebarCollapsed');
-      return v === 'true';
-    } catch (e) {
-      return false;
-    }
-  });
-
-  const toggleSidebarCollapsed = () => {
-    setSidebarCollapsed((prev) => {
-      const next = !prev;
-      try { localStorage.setItem('sidebarCollapsed', next ? 'true' : 'false'); } catch (e) {}
-      return next;
-    });
-  };
+  // sidebar collapse removed — always show full sidebar
 
 
   const handleWorldNavClick = () => {
@@ -90,7 +88,7 @@ function MainApp() {
 
         <div style={styles.headerRight}>
           <SaveIndicator status={saveStatus} />
-          <AIStatus />
+          <AIStatus selectedModel={selectedModel} setSelectedModel={handleSetSelectedModel} />
         </div>
       </header>
 
@@ -102,11 +100,7 @@ function MainApp() {
           <>
             {/* Left Sidebar - Navigation */}
             <aside style={styles.sidebar}>
-              <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '8px 12px' }}>
-                <button style={styles.sidebarCollapseButton} onClick={toggleSidebarCollapsed} aria-pressed={sidebarCollapsed} aria-label="Collapse sidebar">
-                  {sidebarCollapsed ? 'Expand' : 'Collapse'}
-                </button>
-              </div>
+              <div style={{ padding: '8px 12px' }} />
               <nav style={styles.nav}>
                 <h3 style={styles.navTitle}>Project</h3>
                 
@@ -196,7 +190,7 @@ function MainApp() {
             {/* PHASE 2: Updated conditional to show world-chat view */}
             {(activeView === 'world-chat' || activeView !== 'world' || worldSubmenuOpen) ? (
               <main style={styles.centerPanel}>
-                {activeView === 'world-chat' && <WorldBuilderChat />}
+                {activeView === 'world-chat' && <WorldBuilderChat selectedModel={selectedModel} />}
                 {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
                 {activeView === 'arcs' && <PlaceholderView title="Story Arcs" />}
                 {activeView === 'episodes' && <PlaceholderView title="Episodes" />}
@@ -422,14 +416,7 @@ const styles = {
     flex: 1,
     overflow: 'hidden',
   },
-  sidebarCollapseButton: {
-    background: 'transparent',
-    border: '1px solid #333',
-    color: '#cbd5e1',
-    padding: '6px 10px',
-    borderRadius: '6px',
-    cursor: 'pointer',
-  },
+  // sidebarCollapseButton removed
   welcome: {
     flex: 1,
     display: 'flex',

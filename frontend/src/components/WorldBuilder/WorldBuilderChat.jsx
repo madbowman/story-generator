@@ -7,7 +7,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { aiService } from '../../services/api';
 
-export default function WorldBuilderChat() {
+export default function WorldBuilderChat({ selectedModel }) {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
     // Load saved conversation for this project from localStorage
@@ -27,7 +27,6 @@ export default function WorldBuilderChat() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [schemas, setSchemas] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('llama3.2');
   const [temperature, setTemperature] = useState(0.8);
   const messagesEndRef = useRef(null);
 
@@ -108,7 +107,7 @@ export default function WorldBuilderChat() {
         }));
 
       const result = await aiService.chat(chatMessages, {
-        model: selectedModel,
+        model: selectedModel || undefined,
         temperature: temperature,
       });
 
@@ -241,16 +240,14 @@ export default function WorldBuilderChat() {
       <div style={styles.header}>
         <h3 style={styles.title}>🌍 World Building Chat</h3>
         <div style={styles.controls}>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            style={styles.modelSelect}
-            title="AI Model"
-          >
-            <option value="llama3.2">llama3.2</option>
-            <option value="llama3.1">llama3.1</option>
-            <option value="mistral">mistral</option>
-          </select>
+          {/* Model selection is managed globally by AIStatus; display current model if provided */}
+          {selectedModel ? (
+            <div style={{ color: '#ccc', fontSize: '13px', padding: '6px 10px' }} title="AI Model">
+              Model: {selectedModel}
+            </div>
+          ) : (
+            <div style={{ color: '#777', fontSize: '13px', padding: '6px 10px' }}>Model: (not selected)</div>
+          )}
           
           <div style={styles.tempControl}>
             <label style={styles.tempLabel} title="Creativity Level">
