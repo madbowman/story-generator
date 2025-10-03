@@ -111,15 +111,7 @@
   - [x] Delete project functionality
   - [x] Current project indicator
   - [x] Last modified timestamps
-- [x] **AIChat** (`src/components/AIChat.jsx`)
-  - [x] Message history display
-  - [x] User/AI message distinction
-  - [x] Input field with send button
-  - [x] Model selection dropdown
-  - [x] Temperature slider
-  - [x] Clear history button
-  - [x] Loading states
-  - [x] Error handling
+  
 - [x] **WorldBuilder** (`src/components/WorldBuilder/WorldBuilder.jsx`)
   - [x] Section navigation tabs
   - [x] World overview editor

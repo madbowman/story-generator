@@ -1,6 +1,6 @@
 /**
  * World Builder Chat Component
- * Enhanced version of AIChat specifically for world building
+ * Specialized chat interface for world building and building world files
  * Includes "Build World" button that extracts conversation data
  */
 import { useState, useRef, useEffect } from 'react';

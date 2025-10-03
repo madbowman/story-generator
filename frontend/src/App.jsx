@@ -7,7 +7,6 @@ import { ProjectProvider, useProject } from './context/ProjectContext';
 import AIStatus from './components/AIStatus';
 import ProjectSelector from './components/ProjectSelector';
 import WorldBuilder from './components/WorldBuilder/WorldBuilder';
-import AIChat from './components/AIChat';
 import WorldBuilderChat from './components/WorldBuilder/WorldBuilderChat';
 
 function App() {
@@ -55,6 +54,7 @@ function MainApp() {
       return next;
     });
   };
+
 
   const handleWorldNavClick = () => {
     if (activeView !== 'world') {
@@ -204,13 +204,7 @@ function MainApp() {
               </main>
             ) : null}
 
-            {/* Right Sidebar - AI Chat (hide when in world-chat mode) */}
-            {/* PHASE 2: Hide regular AIChat when in world-chat mode since WorldBuilderChat has its own chat */}
-            {activeView !== 'world-chat' && (
-              <aside style={(activeView === 'world' && !worldSubmenuOpen) ? styles.rightSidebarExpanded : styles.rightSidebar}>
-                <AIChat context={projectData} />
-              </aside>
-            )}
+            {/* Right sidebar removed — contextual widgets were replaced with an inline contextual area or can be added later if needed */}
           </>
         )}
       </div>
@@ -427,20 +421,6 @@ const styles = {
   centerPanel: {
     flex: 1,
     overflow: 'hidden',
-  },
-  rightSidebar: {
-    width: '400px',
-    backgroundColor: '#1a1a1a',
-    borderLeft: '1px solid #333',
-    display: 'flex',
-    flexDirection: 'column',
-  },
-  rightSidebarExpanded: {
-    width: 'calc(100% - 250px)',
-    backgroundColor: '#1a1a1a',
-    borderLeft: '1px solid #333',
-    display: 'flex',
-    flexDirection: 'column',
   },
   sidebarCollapseButton: {
     background: 'transparent',

@@ -34,7 +34,7 @@
 
 1. **`frontend/src/components/WorldBuilder/WorldBuilderChat.jsx`** (NEW FILE)
    - Chat interface specifically for world building
-   - Based on your existing `AIChat` component style
+   - Based on the original chat component style
    - Includes "Build World" button
    - Shows AI greeting with instructions
    - Handles build process and success feedback
@@ -43,7 +43,7 @@
    - Added import for `WorldBuilderChat`
    - Added "Build World Chat" navigation button (💬 icon)
    - Updated center panel to show WorldBuilderChat view
-   - Updated conditional logic to hide regular AIChat when in world-chat mode
+   - Updated conditional logic to use the WorldBuilderChat in world-chat mode
 
 ---
 
@@ -125,7 +125,7 @@ When build succeeds, these files are created/overwritten in `projects/<project-i
 ### Phase 1 Features (Working):
 - ✅ Project creation/management
 - ✅ Basic world builder with manual forms
-- ✅ AI chat sidebar
+- ✅ Basic world builder with manual forms
 - ✅ Ollama integration
 - ✅ JSON file storage
 

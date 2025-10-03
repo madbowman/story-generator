@@ -36,7 +36,6 @@ A desktop application for creating serialized episodic stories through human-AI 
 - Dark theme optimized for long writing sessions
 - Responsive components
 - Save status indicators
-
 ## 🛠 Tech Stack
 
 **Backend:**
@@ -215,7 +214,6 @@ story-generator/
 │       └── components/
 │           ├── AIStatus.jsx            # AI status indicator
 │           ├── ProjectSelector.jsx     # Project switcher
-│           ├── AIChat.jsx              # AI chat interface
 │           └── WorldBuilder/
 │               └── WorldBuilder.jsx    # World building UI
 │
