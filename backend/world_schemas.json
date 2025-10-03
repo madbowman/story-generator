@@ -1,0 +1,199 @@
+{
+  "world_overview": {
+    "name": "string - World name",
+    "description": "string - Brief world description",
+    "timePeriod": "string - Time period or era",
+    "technologyLevel": "string - Technology level (medieval, renaissance, industrial, modern, futuristic, etc.)",
+    "magicSystem": "string - How magic works (if applicable)",
+    "history": "string - Key historical events",
+    "rulesPhysics": "string - Special physics rules or laws"
+  },
+  "locations": {
+    "places": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Location name",
+        "type": "string - city/town/village/dungeon/wilderness/etc",
+        "region": "string - Larger region this belongs to",
+        "population": "number - Population count",
+        "description": "string - Detailed description",
+        "government": "string - Type of government",
+        "economy": "string - Main economic activities",
+        "culture": "string - Cultural notes",
+        "defenses": "string - Military/defensive capabilities",
+        "notableFeatures": ["string - array of notable features"],
+        "coords": {
+          "x": "number - X coordinate",
+          "y": "number - Y coordinate"
+        }
+      }
+    ],
+    "routes": [
+      {
+        "from": "string - place_id",
+        "to": "string - place_id",
+        "mode": "string - foot/horse/cart/ship/train/etc",
+        "distance_km": "number - Distance in kilometers",
+        "travel_time_hours": "number - Travel time in hours",
+        "difficulty": "string - easy/moderate/hard/dangerous",
+        "description": "string - Route description"
+      }
+    ]
+  },
+  "characters": {
+    "characters": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Full name",
+        "role": "string - protagonist/antagonist/supporting/mentor/etc",
+        "age": "number - Age",
+        "race": "string - Race/species",
+        "class": "string - DND style class (warrior/mage/rogue/etc)",
+        "level": "number - Experience level (1-20)",
+        "alignment": "string - DND alignment (lawful good, chaotic evil, etc.)",
+        "description": "string - Physical description",
+        "personality": "string - Personality traits",
+        "backstory": "string - Character backstory",
+        "motivation": "string - Primary motivation",
+        "fears": ["string - array of fears"],
+        "skills": [
+          {
+            "name": "string - Skill name",
+            "proficiency": "string - novice/proficient/expert/master"
+          }
+        ],
+        "weaknesses": ["string - array of weaknesses"],
+        "equipment": ["string - array of equipment/items"],
+        "relationships": [
+          {
+            "character_id": "string - related character id",
+            "type": "string - friend/enemy/family/mentor/rival/etc",
+            "status": "string - Current relationship status",
+            "description": "string - Relationship description"
+          }
+        ],
+        "currentLocation": "string - location_id"
+      }
+    ]
+  },
+  "npcs": {
+    "npcs": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - NPC name",
+        "role": "string - merchant/guard/innkeeper/etc",
+        "location": "string - location_id where found",
+        "description": "string - Brief description",
+        "personality": "string - Key personality traits",
+        "services": ["string - services they provide"],
+        "questGiver": "boolean - Can give quests",
+        "attitude": "string - friendly/neutral/hostile"
+      }
+    ]
+  },
+  "factions": {
+    "factions": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Faction name",
+        "type": "string - guild/kingdom/cult/military/criminal/etc",
+        "alignment": "string - DND alignment",
+        "headquarters": "string - location_id",
+        "description": "string - Faction description",
+        "goals": ["string - array of faction goals"],
+        "methods": "string - How they operate",
+        "leadership": "string - Leadership structure",
+        "membership": "number - Approximate membership",
+        "resources": "string - Available resources (wealth/military/magic/etc)",
+        "reputation": "string - How they're viewed by others",
+        "relationships": [
+          {
+            "faction_id": "string - related faction id",
+            "status": "string - allied/neutral/rival/enemy",
+            "description": "string - Relationship description"
+          }
+        ],
+        "members": ["string - array of character_ids who are members"]
+      }
+    ]
+  },
+  "religions": {
+    "religions": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Religion/deity name",
+        "type": "string - monotheistic/polytheistic/pantheon/cult/philosophy",
+        "alignment": "string - DND alignment",
+        "domain": "string - Domain of influence (war/nature/knowledge/etc)",
+        "description": "string - Religion description",
+        "beliefs": ["string - array of core beliefs"],
+        "practices": ["string - array of religious practices"],
+        "clergy": "string - How clergy is organized",
+        "temples": ["string - array of location_ids with temples"],
+        "followers": "number - Approximate number of followers",
+        "influence": "string - low/moderate/high/dominant",
+        "relationships": [
+          {
+            "religion_id": "string - related religion id",
+            "status": "string - allied/neutral/opposed",
+            "description": "string - Relationship description"
+          }
+        ],
+        "holyDays": ["string - array of holy days/festivals"],
+        "symbols": "string - Religious symbols/icons"
+      }
+    ]
+  },
+  "glossary": {
+    "terms": [
+      {
+        "term": "string - Term or word",
+        "pronunciation": "string - How to pronounce",
+        "category": "string - place/person/magic/technology/creature/etc",
+        "definition": "string - Definition",
+        "etymology": "string - Origin of the term",
+        "usage": "string - How it's used in context"
+      }
+    ]
+  },
+  "content": {
+    "items": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Item name",
+        "type": "string - weapon/armor/potion/artifact/tool/etc",
+        "rarity": "string - common/uncommon/rare/legendary",
+        "description": "string - Item description",
+        "properties": "string - Special properties or effects",
+        "value": "number - Gold piece value",
+        "weight": "number - Weight in pounds",
+        "requiresAttunement": "boolean - Needs attunement"
+      }
+    ],
+    "hazards": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Hazard name",
+        "type": "string - trap/environmental/magical/etc",
+        "severity": "string - minor/moderate/deadly",
+        "description": "string - Hazard description",
+        "trigger": "string - What triggers it",
+        "effect": "string - What it does",
+        "detection": "string - How to detect (DC)",
+        "disarm": "string - How to disarm (DC)"
+      }
+    ],
+    "machines": [
+      {
+        "id": "string - unique_id_lowercase",
+        "name": "string - Machine name",
+        "type": "string - vehicle/construct/device/etc",
+        "description": "string - Machine description",
+        "purpose": "string - What it does",
+        "operation": "string - How to operate it",
+        "creator": "string - Who built it",
+        "location": "string - location_id where found"
+      }
+    ]
+  }
+}

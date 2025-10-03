@@ -1,5 +1,6 @@
 /**
  * Story Builder App - Main Application
+ * Phase 2: Added World Builder Chat
  */
 import { useState } from 'react';
 import { ProjectProvider, useProject } from './context/ProjectContext';
@@ -7,6 +8,7 @@ import AIStatus from './components/AIStatus';
 import ProjectSelector from './components/ProjectSelector';
 import WorldBuilder from './components/WorldBuilder/WorldBuilder';
 import AIChat from './components/AIChat';
+import WorldBuilderChat from './components/WorldBuilder/WorldBuilderChat';
 
 function App() {
   return (
@@ -18,7 +20,7 @@ function App() {
 
 function MainApp() {
   const { currentProject, projectData, saveStatus } = useProject();
-  const [activeView, setActiveView] = useState('world');
+  const [activeView, setActiveView] = useState('world-chat');
   const [activeSection, setActiveSection] = useState('world_overview');
   const [worldSubmenuOpen, setWorldSubmenuOpen] = useState(() => {
     try {
@@ -63,6 +65,7 @@ function MainApp() {
       toggleWorldSubmenu();
     }
   };
+  
   const sections = [
     { id: 'world_overview', label: 'World Overview', icon: '🌍' },
     { id: 'locations', label: 'Locations', icon: '📍' },
@@ -106,6 +109,15 @@ function MainApp() {
               </div>
               <nav style={styles.nav}>
                 <h3 style={styles.navTitle}>Project</h3>
+                
+                {/* PHASE 2: New World Builder Chat Button */}
+                <NavButton
+                  label="Build World Chat"
+                  icon="💬"
+                  active={activeView === 'world-chat'}
+                  onClick={() => setActiveView('world-chat')}
+                />
+                
                 <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                   <NavButton
                     label="World Builder"
@@ -181,8 +193,10 @@ function MainApp() {
             </aside>
 
             {/* Center Panel - Main Editor */}
-            {(activeView !== 'world' || worldSubmenuOpen) ? (
+            {/* PHASE 2: Updated conditional to show world-chat view */}
+            {(activeView === 'world-chat' || activeView !== 'world' || worldSubmenuOpen) ? (
               <main style={styles.centerPanel}>
+                {activeView === 'world-chat' && <WorldBuilderChat />}
                 {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
                 {activeView === 'arcs' && <PlaceholderView title="Story Arcs" />}
                 {activeView === 'episodes' && <PlaceholderView title="Episodes" />}
@@ -190,10 +204,13 @@ function MainApp() {
               </main>
             ) : null}
 
-            {/* Right Sidebar - AI Chat (expand when center is hidden) */}
-            <aside style={(activeView === 'world' && !worldSubmenuOpen) ? styles.rightSidebarExpanded : styles.rightSidebar}>
-              <AIChat context={projectData} />
-            </aside>
+            {/* Right Sidebar - AI Chat (hide when in world-chat mode) */}
+            {/* PHASE 2: Hide regular AIChat when in world-chat mode since WorldBuilderChat has its own chat */}
+            {activeView !== 'world-chat' && (
+              <aside style={(activeView === 'world' && !worldSubmenuOpen) ? styles.rightSidebarExpanded : styles.rightSidebar}>
+                <AIChat context={projectData} />
+              </aside>
+            )}
           </>
         )}
       </div>

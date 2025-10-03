@@ -1,16 +1,19 @@
 """
 Story Builder App - Flask Backend
 Main application entry point
+Phase 2: World Building from Conversation
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
+import json  # PHASE 2: Added for world schemas
 
 # FIXED IMPORTS - removed 'backend.' prefix
 from modules.ai_integration.ollama_client import OllamaClient
 from modules.world_builder.project_manager import ProjectManager
-from modules.world_builder.world_builder import WorldBuilder  # ADDED
-from modules.consistency.validator import ConsistencyValidator  # ADDED
+from modules.world_builder.world_builder import WorldBuilder
+from modules.world_builder.world_extractor import WorldExtractor  # PHASE 2: Added
+from modules.consistency.validator import ConsistencyValidator
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
@@ -18,8 +21,9 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 # Initialize managers
 ollama = OllamaClient()
 project_manager = ProjectManager()
-world_builder = WorldBuilder()  # ADDED
-consistency_validator = ConsistencyValidator()  # ADDED
+world_builder = WorldBuilder()
+world_extractor = WorldExtractor(ollama)  # PHASE 2: Added
+consistency_validator = ConsistencyValidator()
 
 # ADDED: Setup projects directory
 PROJECTS_DIR = Path(__file__).parent.parent / 'projects'
@@ -105,7 +109,7 @@ def ai_chat():
 @app.route('/api/projects', methods=['GET'])
 def list_projects():
     """List all projects"""
-    result = project_manager.list_projects(PROJECTS_DIR)  # FIXED: added PROJECTS_DIR
+    result = project_manager.list_projects(PROJECTS_DIR)
     return jsonify(result)
 
 @app.route('/api/projects', methods=['POST'])
@@ -128,7 +132,7 @@ def create_project():
     genre = data.get('genre', 'General')
     
     result = project_manager.create_project(
-        PROJECTS_DIR,  # FIXED: added PROJECTS_DIR
+        PROJECTS_DIR,
         title=title,
         description=description,
         genre=genre
@@ -142,7 +146,7 @@ def create_project():
 @app.route('/api/projects/<project_id>', methods=['GET'])
 def load_project(project_id):
     """Load project data"""
-    result = project_manager.load_project(PROJECTS_DIR, project_id)  # FIXED: added PROJECTS_DIR
+    result = project_manager.load_project(PROJECTS_DIR, project_id)
     
     if result and result.get('success'):
         return jsonify(result)
@@ -152,7 +156,7 @@ def load_project(project_id):
 @app.route('/api/projects/<project_id>', methods=['DELETE'])
 def delete_project(project_id):
     """Delete a project"""
-    result = project_manager.delete_project(PROJECTS_DIR, project_id)  # FIXED: added PROJECTS_DIR
+    result = project_manager.delete_project(PROJECTS_DIR, project_id)
     return jsonify(result), 200 if result['success'] else 404
 
 # ADDED: World building endpoints
@@ -179,6 +183,63 @@ def check_consistency(project_id):
     scope = data.get('scope', 'world')
     result = consistency_validator.validate(PROJECTS_DIR, project_id, scope)
     return jsonify(result)
+
+# ============================================================================
+# WORLD BUILDING FROM CONVERSATION - PHASE 2
+# ============================================================================
+
+@app.route('/api/world/schemas', methods=['GET'])
+def get_world_schemas():
+    """Get world building JSON schemas for AI reference"""
+    schemas_path = Path(__file__).parent / 'world_schemas.json'
+    
+    try:
+        with open(schemas_path, 'r', encoding='utf-8') as f:
+            schemas = json.load(f)
+        return jsonify(schemas)
+    except FileNotFoundError:
+        return jsonify({'error': 'Schemas file not found'}), 404
+    except json.JSONDecodeError:
+        return jsonify({'error': 'Invalid schemas file'}), 500
+
+@app.route('/api/projects/<project_id>/world/build', methods=['POST'])
+def build_world_from_conversation(project_id):
+    """
+    Build world files from AI conversation
+    Body: {
+        "conversation": [{"role": "user/assistant", "content": "..."}],
+        "schemas": {...}
+    }
+    """
+    data = request.json
+    
+    conversation = data.get('conversation', [])
+    schemas = data.get('schemas', {})
+    
+    if not conversation or len(conversation) < 2:
+        return jsonify({
+            'success': False,
+            'error': 'Conversation must have at least 2 messages'
+        }), 400
+    
+    if not schemas:
+        return jsonify({
+            'success': False,
+            'error': 'Schemas are required'
+        }), 400
+    
+    # Extract and build world
+    result = world_extractor.extract_and_build(
+        projects_dir=PROJECTS_DIR,
+        project_id=project_id,
+        conversation=conversation,
+        schemas=schemas
+    )
+    
+    if result['success']:
+        return jsonify(result), 200
+    else:
+        return jsonify(result), 400
 
 # ============================================================================
 # HEALTH CHECK
