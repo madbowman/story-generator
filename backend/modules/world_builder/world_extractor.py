@@ -227,6 +227,37 @@ BEGIN EXTRACTION (JSON only):"""
         
         return empty_schemas.get(section, {})
     
+    def _fix_missing_names(self, section: str, data: Dict) -> Dict:
+        """Fix missing name fields by extracting from ID"""
+        if section == 'characters' and 'characters' in data:
+            for char in data['characters']:
+                if 'name' not in char or not char['name']:
+                    # Extract name from ID: "gorvoth_tribe_warrior" -> "Gorvoth"
+                    char['name'] = char['id'].split('_')[0].capitalize()
+        
+        elif section == 'npcs' and 'npcs' in data:
+            for npc in data['npcs']:
+                if 'name' not in npc or not npc['name']:
+                    npc['name'] = npc['id'].split('_')[0].capitalize()
+        
+        elif section == 'locations' and 'places' in data:
+            for place in data['places']:
+                if 'name' not in place or not place['name']:
+                    # "silver_keep" -> "Silver Keep"
+                    place['name'] = ' '.join(word.capitalize() for word in place['id'].split('_'))
+        
+        elif section == 'factions' and 'factions' in data:
+            for faction in data['factions']:
+                if 'name' not in faction or not faction['name']:
+                    faction['name'] = ' '.join(word.capitalize() for word in faction['id'].split('_'))
+        
+        elif section == 'religions' and 'religions' in data:
+            for religion in data['religions']:
+                if 'name' not in religion or not religion['name']:
+                    religion['name'] = ' '.join(word.capitalize() for word in religion['id'].split('_'))
+        
+        return data
+    
     def _write_world_files(self, world_dir: Path, data: Dict) -> List[str]:
         """Write extracted data to JSON files"""
         
@@ -246,6 +277,9 @@ BEGIN EXTRACTION (JSON only):"""
         
         for data_key, filename in file_mapping.items():
             if data_key in data and data[data_key]:
+                # Fix missing names before writing
+                data[data_key] = self._fix_missing_names(data_key, data[data_key])
+                
                 file_path = world_dir / filename
                 
                 # Write JSON with pretty printing
