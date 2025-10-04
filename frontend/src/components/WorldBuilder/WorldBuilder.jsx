@@ -22,6 +22,7 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
   const [saving, setSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
+  const [sectionViewMode, setSectionViewMode] = useState('split');
 
   const sections = [
     { id: 'world_overview', label: 'World Overview', icon: '🌍' },
@@ -37,6 +38,8 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
   useEffect(() => {
     if (currentProject) {
       loadSection(activeSection);
+      // reset view mode when switching sections
+      setSectionViewMode('split');
     }
   }, [currentProject, activeSection]);
 
@@ -91,14 +94,57 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
 
   const updateItem = (arrayField, index, field, value) => {
     const items = [...(worldData[arrayField] || [])];
-    items[index] = { ...items[index], [field]: value };
+    const orig = items[index] || {};
+
+    // helper to set nested value by dot-path without mutating original
+    const setByPath = (obj, path, val) => {
+      const parts = path.split('.');
+      let res = Array.isArray(obj) ? [...obj] : { ...obj };
+      let cur = res;
+      for (let i = 0; i < parts.length - 1; i++) {
+        const p = parts[i];
+        if (cur[p] === undefined || cur[p] === null) cur[p] = {};
+        else cur[p] = Array.isArray(cur[p]) ? [...cur[p]] : { ...cur[p] };
+        cur = cur[p];
+      }
+      cur[parts[parts.length - 1]] = val;
+      return res;
+    };
+
+    if (field && field.includes('.')) {
+      items[index] = setByPath(orig, field, value);
+    } else {
+      items[index] = { ...orig, [field]: value };
+    }
+
     setWorldData({ ...worldData, [arrayField]: items });
   };
 
-  const removeItem = (arrayField, index) => {
+  const removeItem = async (arrayField, index) => {
     const items = [...(worldData[arrayField] || [])];
     items.splice(index, 1);
-    setWorldData({ ...worldData, [arrayField]: items });
+    const newData = { ...worldData, [arrayField]: items };
+
+    // optimistic update
+    setWorldData(newData);
+
+    // persist change immediately
+    setSaving(true);
+    setSaveError('');
+    setSaveMessage('Deleting...');
+    try {
+      await api.put(`/projects/${currentProject}/world/${activeSection}`, newData);
+      setSaveMessage('Deleted');
+      setTimeout(() => setSaveMessage(''), 2000);
+    } catch (err) {
+      // revert optimistic update
+      const reverted = { ...worldData, [arrayField]: [...(worldData[arrayField] || [])] };
+      setWorldData(reverted);
+      setSaveError('Failed to delete: ' + (err.message || 'unknown error'));
+      setTimeout(() => setSaveError(''), 5000);
+    } finally {
+      setSaving(false);
+    }
   };
 
   if (!currentProject) {
@@ -120,37 +166,39 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
               <WorldOverview data={worldData} updateField={updateField} />
             )}
             {activeSection === 'locations' && (
-              <Locations data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Locations data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'characters' && (
-              <Characters data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Characters data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'npcs' && (
-              <NPCs data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <NPCs data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'factions' && (
-              <Factions data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Factions data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'religions' && (
-              <Religions data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Religions data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'glossary' && (
-              <Glossary data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Glossary data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
             {activeSection === 'content' && (
-              <Content data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} />
+              <Content data={worldData} addItem={addItem} updateItem={updateItem} removeItem={removeItem} onViewModeChange={(m) => setSectionViewMode(m)} />
             )}
           </>
         )}
 
-        {/* Save Button */}
-        <div style={styles.saveBar}>
-          <button style={styles.saveButton} onClick={saveSection} disabled={saving}>
-            {saving ? 'Saving...' : 'Save Changes'}
-          </button>
-          {saveMessage && <span style={styles.saveMessage}>{saveMessage}</span>}
-          {saveError && <span style={styles.saveError}>{saveError}</span>}
-        </div>
+        {/* Save Button: show only on detail view or world_overview */}
+        { (activeSection === 'world_overview' || sectionViewMode === 'detail') && (
+          <div style={styles.saveBar}>
+            <button style={styles.saveButton} onClick={saveSection} disabled={saving}>
+              {saving ? 'Saving...' : 'Save Changes'}
+            </button>
+            {saveMessage && <span style={styles.saveMessage}>{saveMessage}</span>}
+            {saveError && <span style={styles.saveError}>{saveError}</span>}
+          </div>
+        )}
       </div>
     </div>
   );

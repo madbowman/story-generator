@@ -42,6 +42,15 @@ const WorldOverview = ({ data, updateField }) => (
       />
     </div>
     <div style={styles.formGroup}>
+      <label style={styles.label}>Magic System</label>
+      <input
+        style={styles.input}
+        value={data.magicSystem || ''}
+        onChange={(e) => updateField('magicSystem', e.target.value)}
+        placeholder="Describe how magic works (if applicable)"
+      />
+    </div>
+    <div style={styles.formGroup}>
       <label style={styles.label}>History</label>
       <textarea
         style={styles.textarea}

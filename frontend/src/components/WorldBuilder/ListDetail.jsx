@@ -14,6 +14,9 @@ const ListDetail = (props) => {
     detailOnlyOnSelect = false,
     enableDetailView = true,
     title = '',
+    previewFields = null,
+    openDetailOnAdd = false,
+    onViewModeChange = null,
   } = props;
 
   const [selected, setSelected] = React.useState(items && items.length ? 0 : -1);
@@ -35,7 +38,7 @@ const ListDetail = (props) => {
     setTimeout(() => {
       const newIndex = (items || []).length;
       setSelected(newIndex);
-      if (detailOnlyOnSelect) setViewMode('detail');
+      if (openDetailOnAdd || detailOnlyOnSelect) setViewMode('detail');
     }, 50);
   };
 
@@ -46,6 +49,11 @@ const ListDetail = (props) => {
       if (detailOnlyOnSelect) setViewMode('list');
     } else if (selected > index) setSelected(selected - 1);
   };
+
+  React.useEffect(() => {
+    if (typeof onViewModeChange === 'function') onViewModeChange(viewMode);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [viewMode]);
 
   return (
     <div style={styles.listDetail}>
@@ -82,12 +90,47 @@ const ListDetail = (props) => {
           <div style={styles.emptyState}><p>Select an item to view or edit.</p></div>
         ) : (
           <div>
-            {(detailOnlyOnSelect || enableDetailView) && viewMode === 'detail' && (
-              <div style={{ marginBottom: '12px' }}>
-                <button style={styles.backButton} onClick={() => { setViewMode('list'); setSelected(-1); }}>← Back</button>
+            {viewMode === 'detail' ? (
+              <div>
+                {(detailOnlyOnSelect || enableDetailView) && (
+                  <div style={{ marginBottom: '12px' }}>
+                    <button style={styles.backButton} onClick={() => { setViewMode('list'); setSelected(-1); }}>← Back</button>
+                  </div>
+                )}
+                {renderItemEditor(items[selected], selected, (field, value) => onUpdate(selected, field, value))}
               </div>
+            ) : (
+              // Split mode: concise preview rendered using the same detail styles but limited fields
+              (previewFields && Array.isArray(previewFields) && previewFields.length) ? (
+                <div style={styles.card}>
+                  <div style={styles.cardHeader}><h3 style={styles.cardTitle}>{itemLabel(items[selected], selected)}</h3></div>
+                  <div style={{ padding: '8px 12px' }}>
+                    {previewFields.map((f) => {
+                      const val = f.split('.').reduce((o, k) => (o && o[k] !== undefined) ? o[k] : null, items[selected]);
+                      const humanize = (s) => {
+                        if (!s) return s;
+                        // replace dots/underscores with spaces
+                        let t = s.replace(/\./g, ' ').replace(/_/g, ' ');
+                        // insert space between camelCase boundaries
+                        t = t.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+                        t = t.replace(/\s+/g, ' ').trim();
+                        // capitalize each word
+                        return t.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+                      };
+                      const label = humanize(f);
+                      return (
+                        <div key={f} style={styles.formGroup}>
+                          <label style={styles.label}>{label}</label>
+                          <div style={styles.input}>{val === null || val === undefined ? '' : (typeof val === 'string' ? val : JSON.stringify(val))}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div>{itemLabel(items[selected], selected)}</div>
+              )
             )}
-            {renderItemEditor(items[selected], selected, (field, value) => onUpdate(selected, field, value))}
           </div>
         )}
       </div>

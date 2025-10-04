@@ -27,17 +27,6 @@
           "y": "number - Y coordinate"
         }
       }
-    ],
-    "routes": [
-      {
-        "from": "string - place_id",
-        "to": "string - place_id",
-        "mode": "string - foot/horse/cart/ship/train/etc",
-        "distance_km": "number - Distance in kilometers",
-        "travel_time_hours": "number - Travel time in hours",
-        "difficulty": "string - easy/moderate/hard/dangerous",
-        "description": "string - Route description"
-      }
     ]
   },
   "characters": {
