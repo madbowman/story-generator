@@ -245,11 +245,6 @@ const styles = {
     fontSize: '14px',
     fontWeight: '600',
   },
-  listItemSubtitle: {
-    color: '#9ca3af',
-    fontSize: '12px',
-    marginTop: '4px',
-  },
   listItemActions: {
     display: 'flex',
     gap: '8px',

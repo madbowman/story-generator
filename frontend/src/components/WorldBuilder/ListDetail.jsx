@@ -72,7 +72,6 @@ const ListDetail = (props) => {
                 <div key={it.id || idx} style={{...styles.listItem, ...(selected === idx ? styles.listItemActive : {})}}>
                   <div style={styles.listItemMain} onClick={() => { setSelected(idx); if (detailOnlyOnSelect) setViewMode('detail'); }}>
                     <div style={styles.listItemTitle}>{itemLabel(it, idx)}</div>
-                    <div style={styles.listItemSubtitle}>{(it.type || it.role || it.description || '').slice(0, 60)}</div>
                   </div>
                   <div style={styles.listItemActions}>
                     <button style={styles.smallButton} onClick={() => { setSelected(idx); if (detailOnlyOnSelect || enableDetailView) setViewMode('detail'); }}>View</button>

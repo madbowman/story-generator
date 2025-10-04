@@ -211,22 +211,22 @@ class ProjectManager:
         """Create empty world data files"""
         world_dir = project_path / 'world'
         
-        # World overview
+        # World overview (match world_schemas.json)
         with open(world_dir / 'world_overview.json', 'w', encoding='utf-8') as f:
             json.dump({
                 'name': '',
                 'description': '',
                 'timePeriod': '',
                 'technologyLevel': '',
+                'magicSystem': '',
                 'history': '',
                 'rulesPhysics': ''
             }, f, indent=2)
         
-        # Locations
+        # Locations (match world_schemas.json)
         with open(world_dir / 'locations.json', 'w', encoding='utf-8') as f:
             json.dump({
-                'places': [],
-                'routes': []
+                'places': []
             }, f, indent=2)
         
         # Characters
