@@ -146,8 +146,6 @@ class WorldExtractor:
                 schemas.get('content', {}).get('items', [{}])[0] if schemas.get('content', {}).get('items') else {}
             )
         
-        # Hazards and machines removed from content schema - no parsing
-        
         return data
     
     def _split_into_sections(self, text: str) -> Dict[str, str]:

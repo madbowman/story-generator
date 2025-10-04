@@ -408,7 +408,7 @@ etymology: [origin]
 usage: [usage in context]
 ```
 
-### ITEMS, HAZARDS, MACHINES
+### ITEMS
 ```
 [Similar key-value format - see world_schemas.json for details]
 ```
