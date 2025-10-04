@@ -7,6 +7,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { aiService } from '../../services/api';
 
+import chatStyles from '../../styles/aichat/styles';
+
 export default function WorldBuilderChat() {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
@@ -389,23 +391,23 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
 
   if (!currentProject) {
     return (
-      <div style={styles.container}>
-        <div style={styles.emptyState}>
-          <p style={styles.emptyText}>Please create or select a project first.</p>
+      <div style={chatStyles.container}>
+        <div style={chatStyles.emptyState}>
+          <p style={chatStyles.emptyText}>Please create or select a project first.</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.header}>
-        <h3 style={styles.title}>🌍 World Building Chat - Phase 2.1</h3>
-        <div style={styles.controls}>
+    <div style={chatStyles.container}>
+      <div style={chatStyles.header}>
+  <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
+        <div style={chatStyles.controls}>
           <select
             value={selectedModel}
             onChange={(e) => setSelectedModel(e.target.value)}
-            style={styles.modelSelect}
+            style={chatStyles.modelSelect}
             title="AI Model"
           >
             <option value="llama3.2">llama3.2</option>
@@ -413,8 +415,8 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
             <option value="mistral">mistral</option>
           </select>
           
-          <div style={styles.tempControl}>
-            <label style={styles.tempLabel} title="Creativity Level">
+            <div style={chatStyles.tempControl}>
+            <label style={chatStyles.tempLabel} title="Creativity Level">
               🌡️ {temperature.toFixed(1)}
             </label>
             <input
@@ -424,13 +426,13 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
               step="0.1"
               value={temperature}
               onChange={(e) => setTemperature(parseFloat(e.target.value))}
-              style={styles.tempSlider}
+              style={chatStyles.tempSlider}
             />
           </div>
 
           <button 
             onClick={clearChat}
-            style={styles.clearButton}
+            style={chatStyles.clearButton}
             title="Clear Chat"
           >
             🗑️
@@ -438,33 +440,33 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
         </div>
       </div>
 
-      <div style={styles.messagesContainer}>
+      <div style={chatStyles.messagesContainer}>
         {messages.map((msg, idx) => (
           <Message key={idx} message={msg} />
         ))}
         
         {isGenerating && (
-          <div style={styles.generatingIndicator}>
-            <div style={styles.dots}>
+          <div style={chatStyles.generatingIndicator}>
+            <div style={chatStyles.dots}>
               <span>●</span>
               <span>●</span>
               <span>●</span>
             </div>
-            <span style={styles.generatingText}>AI is thinking...</span>
+            <span style={chatStyles.generatingText}>AI is thinking...</span>
           </div>
         )}
         
         {isGeneratingSummary && (
-          <div style={styles.summaryIndicator}>
-            <div style={styles.spinner}>📝</div>
-            <span style={styles.summaryText}>Generating structured world summary...</span>
+          <div style={chatStyles.summaryIndicator}>
+            <div style={chatStyles.spinner}>📝</div>
+            <span style={chatStyles.summaryText}>Generating structured world summary...</span>
           </div>
         )}
         
         {isBuilding && (
-          <div style={styles.buildingIndicator}>
-            <div style={styles.spinner}>⏳</div>
-            <span style={styles.buildingText}>Extracting world data from summary...</span>
+          <div style={chatStyles.buildingIndicator}>
+            <div style={chatStyles.spinner}>⏳</div>
+            <span style={chatStyles.buildingText}>Extracting world data from summary...</span>
           </div>
         )}
         
@@ -472,13 +474,13 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
       </div>
 
       {/* Two-Step Action Buttons */}
-      <div style={styles.actionButtons}>
+      <div style={chatStyles.actionButtons}>
         <button
           onClick={generateWorldSummary}
           disabled={isGeneratingSummary || isGenerating || isBuilding || messages.length < 2}
           style={{
-            ...styles.summaryButton,
-            ...(isGeneratingSummary || isGenerating || isBuilding || messages.length < 2 ? styles.buttonDisabled : {})
+            ...chatStyles.summaryButton,
+            ...(isGeneratingSummary || isGenerating || isBuilding || messages.length < 2 ? chatStyles.buttonDisabled : {})
           }}
         >
           {isGeneratingSummary ? '📝 Generating...' : '📝 Generate World Summary'}
@@ -488,8 +490,8 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
           onClick={buildWorldFromSummary}
           disabled={!hasSummary || isBuilding || isGenerating || isGeneratingSummary}
           style={{
-            ...styles.buildButton,
-            ...(!hasSummary || isBuilding || isGenerating || isGeneratingSummary ? styles.buttonDisabled : {})
+            ...chatStyles.buildButton,
+            ...(!hasSummary || isBuilding || isGenerating || isGeneratingSummary ? chatStyles.buttonDisabled : {})
           }}
         >
           {isBuilding ? '⏳ Building...' : '🌍 Build World from Summary'}
@@ -497,7 +499,7 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
       </div>
 
       {/* Input Form */}
-      <form onSubmit={handleSubmit} style={styles.inputForm}>
+      <form onSubmit={handleSubmit} style={chatStyles.inputForm}>
         <textarea
           value={input}
           onChange={(e) => setInput(e.target.value)}
@@ -508,15 +510,15 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
             }
           }}
           placeholder="Describe your world, characters, locations... (Shift+Enter for new line)"
-          style={styles.input}
+          style={chatStyles.input}
           rows={3}
           disabled={isGenerating || isBuilding || isGeneratingSummary}
         />
         <button 
           type="submit" 
           style={{
-            ...styles.sendButton,
-            ...((!input.trim() || isGenerating || isBuilding || isGeneratingSummary) ? styles.sendButtonDisabled : {})
+            ...chatStyles.sendButton,
+            ...((!input.trim() || isGenerating || isBuilding || isGeneratingSummary) ? chatStyles.sendButtonDisabled : {})
           }}
           disabled={!input.trim() || isGenerating || isBuilding || isGeneratingSummary}
         >
@@ -538,267 +540,20 @@ function Message({ message }) {
 
   return (
     <div style={{
-      ...styles.message,
-      ...(isUser ? styles.userMessage : isSystem ? styles.systemMessage : isSummary ? styles.summaryMessage : styles.aiMessage)
+      ...chatStyles.message,
+      ...(isUser ? chatStyles.userMessage : isSystem ? chatStyles.systemMessage : isSummary ? chatStyles.summaryMessage : chatStyles.aiMessage)
     }}>
-      <div style={styles.messageHeader}>
-        <span style={styles.messageRole}>
+      <div style={chatStyles.messageHeader}>
+        <span style={chatStyles.messageRole}>
           {isUser ? '👤 You' : isSystem ? '⚠️ System' : isSummary ? '📝 AI Summary' : '🤖 AI'}
         </span>
-        <span style={styles.messageTime}>
+        <span style={chatStyles.messageTime}>
           {new Date(message.timestamp).toLocaleTimeString()}
         </span>
       </div>
-      <div style={styles.messageContent}>
+      <div style={chatStyles.messageContent}>
         {message.content}
       </div>
     </div>
   );
 }
-
-const styles = {
-  container: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100%',
-    backgroundColor: '#1a1a1a',
-  },
-  header: {
-    padding: '16px',
-    borderBottom: '1px solid #444',
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  title: {
-    color: '#fff',
-    fontSize: '16px',
-    margin: 0,
-    fontWeight: '600',
-  },
-  controls: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '12px',
-  },
-  modelSelect: {
-    padding: '6px 10px',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    border: '1px solid #444',
-    borderRadius: '4px',
-    fontSize: '12px',
-    cursor: 'pointer',
-  },
-  tempControl: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '6px',
-  },
-  tempLabel: {
-    color: '#aaa',
-    fontSize: '12px',
-    cursor: 'help',
-  },
-  tempSlider: {
-    width: '80px',
-  },
-  clearButton: {
-    padding: '6px 10px',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    border: '1px solid #444',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    fontSize: '14px',
-  },
-  messagesContainer: {
-    flex: 1,
-    overflowY: 'auto',
-    padding: '16px',
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '12px',
-  },
-  emptyState: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    color: '#666',
-  },
-  emptyText: {
-    fontSize: '16px',
-  },
-  message: {
-    padding: '12px',
-    borderRadius: '8px',
-    maxWidth: '80%',
-  },
-  userMessage: {
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    alignSelf: 'flex-end',
-    marginLeft: 'auto',
-  },
-  aiMessage: {
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    alignSelf: 'flex-start',
-    border: '1px solid #444',
-  },
-  summaryMessage: {
-    backgroundColor: '#7c3aed',
-    color: '#fff',
-    alignSelf: 'flex-start',
-    border: '1px solid #6d28d9',
-    maxWidth: '90%',
-  },
-  systemMessage: {
-    backgroundColor: '#10b981',
-    color: '#fff',
-    alignSelf: 'center',
-    fontSize: '13px',
-    maxWidth: '90%',
-  },
-  messageHeader: {
-    display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: '6px',
-    fontSize: '12px',
-    opacity: 0.8,
-  },
-  messageRole: {
-    fontWeight: '600',
-  },
-  messageTime: {
-    fontSize: '11px',
-  },
-  messageContent: {
-    fontSize: '14px',
-    lineHeight: '1.5',
-    whiteSpace: 'pre-wrap',
-  },
-  generatingIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px',
-    backgroundColor: '#2a2a2a',
-    borderRadius: '8px',
-    alignSelf: 'flex-start',
-    border: '1px solid #444',
-  },
-  summaryIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px',
-    backgroundColor: '#7c3aed',
-    borderRadius: '8px',
-    alignSelf: 'center',
-    border: '1px solid #6d28d9',
-  },
-  buildingIndicator: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    padding: '12px',
-    backgroundColor: '#3b82f6',
-    borderRadius: '8px',
-    alignSelf: 'center',
-    border: '1px solid #2563eb',
-  },
-  dots: {
-    display: 'flex',
-    gap: '4px',
-    color: '#3b82f6',
-  },
-  spinner: {
-    fontSize: '20px',
-  },
-  generatingText: {
-    color: '#aaa',
-    fontSize: '13px',
-  },
-  summaryText: {
-    color: '#fff',
-    fontSize: '13px',
-    fontWeight: '500',
-  },
-  buildingText: {
-    color: '#fff',
-    fontSize: '13px',
-    fontWeight: '500',
-  },
-  actionButtons: {
-    padding: '12px 16px',
-    borderTop: '1px solid #444',
-    borderBottom: '1px solid #444',
-    display: 'flex',
-    gap: '12px',
-  },
-  summaryButton: {
-    flex: 1,
-    padding: '14px 20px',
-    backgroundColor: '#7c3aed',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  buildButton: {
-    flex: 1,
-    padding: '14px 20px',
-    backgroundColor: '#10b981',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '6px',
-    fontSize: '15px',
-    fontWeight: '600',
-    cursor: 'pointer',
-    transition: 'background-color 0.2s',
-  },
-  buttonDisabled: {
-    backgroundColor: '#374151',
-    cursor: 'not-allowed',
-    opacity: 0.5,
-  },
-  inputForm: {
-    padding: '16px',
-    display: 'flex',
-    gap: '12px',
-  },
-  input: {
-    flex: 1,
-    padding: '10px 12px',
-    backgroundColor: '#2a2a2a',
-    color: '#fff',
-    border: '1px solid #444',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontFamily: 'inherit',
-    resize: 'none',
-  },
-  sendButton: {
-    padding: '10px 24px',
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    border: 'none',
-    borderRadius: '4px',
-    fontSize: '14px',
-    fontWeight: '500',
-    cursor: 'pointer',
-    whiteSpace: 'nowrap',
-  },
-  sendButtonDisabled: {
-    backgroundColor: '#374151',
-    cursor: 'not-allowed',
-    opacity: 0.5,
-  },
-};

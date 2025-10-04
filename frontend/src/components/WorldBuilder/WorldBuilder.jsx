@@ -10,7 +10,7 @@ import Factions from './Factions';
 import Religions from './Religions';
 import Glossary from './Glossary';
 import Content from './Content';
-import styles from './styles';
+import styles from '../../styles/components/styles';
 
 const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: propSetActiveSection }) => {
   const { currentProject } = useProject();

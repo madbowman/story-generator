@@ -1,6 +1,6 @@
 import React from 'react';
 import ListDetail from './ListDetail';
-import styles from './styles';
+import styles from '../../styles/components/styles';
 
 const NPCs = ({ data, addItem, updateItem, removeItem, onViewModeChange }) => (
   <div style={styles.form}>

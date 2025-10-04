@@ -1,5 +1,5 @@
 import React from 'react';
-import styles from './styles';
+import styles from '../../styles/components/styles';
 
 const WorldOverview = ({ data, updateField }) => (
   <div style={styles.form}>
