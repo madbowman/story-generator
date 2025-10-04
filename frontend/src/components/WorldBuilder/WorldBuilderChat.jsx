@@ -1,13 +1,13 @@
 /**
  * World Builder Chat Component
- * Specialized chat interface for world building and building world files
+ * Enhanced version of AIChat specifically for world building
  * Includes "Build World" button that extracts conversation data
  */
 import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
 import { aiService } from '../../services/api';
 
-export default function WorldBuilderChat({ selectedModel }) {
+export default function WorldBuilderChat() {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
     // Load saved conversation for this project from localStorage
@@ -27,6 +27,7 @@ export default function WorldBuilderChat({ selectedModel }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [schemas, setSchemas] = useState(null);
+  const [selectedModel, setSelectedModel] = useState('llama3.2');
   const [temperature, setTemperature] = useState(0.8);
   const messagesEndRef = useRef(null);
 
@@ -58,7 +59,7 @@ export default function WorldBuilderChat({ selectedModel }) {
     if (messages.length === 0 && currentProject) {
       const greeting = {
         role: 'assistant',
-        content: `Welcome! I'm ready to help you build the world for "${currentProject.title}".\n\nLet's discuss your world together. Tell me about:\n\n• The setting (time period, location, type of world)\n• Key locations and how they're connected\n• Important characters and their roles\n• Factions, religions, or political systems\n• Any unique rules, magic systems, or technology\n\nWe can talk freely about your ideas. When you're happy with everything we've discussed, click the "🌍 Build World from Conversation" button at the bottom and I'll create all the structured world files for you!`,
+        content: `Welcome! I'm ready to help you build the world for "${currentProject.title}".\n\n**How This Works:**\n\nWe'll discuss your world naturally, and when you want to lock in specific entities, use these commands:\n\n**Commands:**\n• \`ADD CHARACTER: name, role, description, age, race, class\`\n• \`ADD LOCATION: name, type, description, region\`\n• \`ADD FACTION: name, type, description\`\n• \`ADD RELIGION: name, type, description\`\n• \`ADD NPC: name, role, location, description\`\n• \`ADD ITEM: name, type, description\`\n• \`SET WORLD: name=..., description=..., timePeriod=...\`\n\n**Examples:**\n\`ADD CHARACTER: King Gnomus Sparkspanner, ruler, wise gnome king, 150, gnome, noble\`\n\`ADD LOCATION: Buzzlebury, city, underground gnome capital, Gnome Kingdom\`\n\`ADD FACTION: Gnome Kingdom, kingdom, underground realm of inventive gnomes\`\n\n**Workflow:**\n1. Discuss ideas with me naturally\n2. When happy with an element, use a command to add it\n3. I'll confirm each addition\n4. When done, click "Build World from Conversation"\n\nLet's start! Tell me about your world.`,
         timestamp: new Date().toISOString(),
       };
       setMessages([greeting]);
@@ -107,7 +108,7 @@ export default function WorldBuilderChat({ selectedModel }) {
         }));
 
       const result = await aiService.chat(chatMessages, {
-        model: selectedModel || undefined,
+        model: selectedModel,
         temperature: temperature,
       });
 
@@ -240,14 +241,16 @@ export default function WorldBuilderChat({ selectedModel }) {
       <div style={styles.header}>
         <h3 style={styles.title}>🌍 World Building Chat</h3>
         <div style={styles.controls}>
-          {/* Model selection is managed globally by AIStatus; display current model if provided */}
-          {selectedModel ? (
-            <div style={{ color: '#ccc', fontSize: '13px', padding: '6px 10px' }} title="AI Model">
-              Model: {selectedModel}
-            </div>
-          ) : (
-            <div style={{ color: '#777', fontSize: '13px', padding: '6px 10px' }}>Model: (not selected)</div>
-          )}
+          <select
+            value={selectedModel}
+            onChange={(e) => setSelectedModel(e.target.value)}
+            style={styles.modelSelect}
+            title="AI Model"
+          >
+            <option value="llama3.2">llama3.2</option>
+            <option value="llama3.1">llama3.1</option>
+            <option value="mistral">mistral</option>
+          </select>
           
           <div style={styles.tempControl}>
             <label style={styles.tempLabel} title="Creativity Level">
