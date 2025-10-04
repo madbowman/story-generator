@@ -249,12 +249,10 @@ class ProjectManager:
         with open(world_dir / 'glossary.json', 'w', encoding='utf-8') as f:
             json.dump({'terms': []}, f, indent=2)
         
-        # Content (items, hazards, machines)
+        # Content (items)
         with open(world_dir / 'content.json', 'w', encoding='utf-8') as f:
             json.dump({
-                'items': [],
-                'hazards': [],
-                'machines': []
+                'items': []
             }, f, indent=2)
         
         # Initialize state files

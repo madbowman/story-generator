@@ -37,7 +37,6 @@
 - [x] **Consistency Validator** (`modules/consistency/validator.py`)
   - [x] Validate world overview completeness
   - [x] Check location IDs (no duplicates)
-  - [x] Validate routes (valid locations)
   - [x] Check travel times
   - [x] Validate character IDs (no duplicates)
   - [x] Check character relationships
@@ -135,7 +134,7 @@
 ### Data Schemas ✅
 - [x] **world_schemas.json** - DND-style templates
   - [x] world_overview schema
-  - [x] locations schema (places, routes)
+  - [x] locations schema (places)
   - [x] characters schema (DND attributes)
   - [x] npcs schema
   - [x] factions schema

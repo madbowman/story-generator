@@ -1,18 +1,18 @@
 """
 Story Builder App - Flask Backend
 Main application entry point
-Phase 2: World Building from Conversation
+Phase 2.1: AI Summary-Based World Building
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
-import json  # PHASE 2: Added for world schemas
+import json
 
 # FIXED IMPORTS - removed 'backend.' prefix
 from modules.ai_integration.ollama_client import OllamaClient
 from modules.world_builder.project_manager import ProjectManager
 from modules.world_builder.world_builder import WorldBuilder
-from modules.world_builder.world_extractor import WorldExtractor  # PHASE 2: Added
+from modules.world_builder.world_extractor import WorldExtractor
 from modules.consistency.validator import ConsistencyValidator
 
 app = Flask(__name__)
@@ -22,7 +22,7 @@ CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 ollama = OllamaClient()
 project_manager = ProjectManager()
 world_builder = WorldBuilder()
-world_extractor = WorldExtractor(ollama)  # PHASE 2: Added
+world_extractor = WorldExtractor(ollama)
 consistency_validator = ConsistencyValidator()
 
 # ADDED: Setup projects directory
@@ -185,7 +185,7 @@ def check_consistency(project_id):
     return jsonify(result)
 
 # ============================================================================
-# WORLD BUILDING FROM CONVERSATION - PHASE 2
+# WORLD BUILDING FROM CONVERSATION - PHASE 2.1
 # ============================================================================
 
 @app.route('/api/world/schemas', methods=['GET'])
@@ -202,24 +202,25 @@ def get_world_schemas():
     except json.JSONDecodeError:
         return jsonify({'error': 'Invalid schemas file'}), 500
 
-@app.route('/api/projects/<project_id>/world/build', methods=['POST'])
-def build_world_from_conversation(project_id):
+# PHASE 2.1: AI summary-based extraction
+@app.route('/api/projects/<project_id>/world/build-from-summary', methods=['POST'])
+def build_world_from_summary(project_id):
     """
-    Build world files from AI conversation
+    Build world from AI-generated summary (Phase 2.1)
     Body: {
-        "conversation": [{"role": "user/assistant", "content": "..."}],
+        "summary": str (AI-generated structured summary),
         "schemas": {...}
     }
     """
     data = request.json
     
-    conversation = data.get('conversation', [])
+    summary = data.get('summary', '')
     schemas = data.get('schemas', {})
     
-    if not conversation or len(conversation) < 2:
+    if not summary:
         return jsonify({
             'success': False,
-            'error': 'Conversation must have at least 2 messages'
+            'error': 'Summary is required'
         }), 400
     
     if not schemas:
@@ -228,11 +229,11 @@ def build_world_from_conversation(project_id):
             'error': 'Schemas are required'
         }), 400
     
-    # Extract and build world
-    result = world_extractor.extract_and_build(
+    # Extract from AI summary
+    result = world_extractor.extract_from_ai_summary(
         projects_dir=PROJECTS_DIR,
         project_id=project_id,
-        conversation=conversation,
+        summary_message=summary,
         schemas=schemas
     )
     
@@ -250,7 +251,7 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "service": "Story Builder Backend"
+        "service": "Story Builder Backend - Phase 2.1"
     })
 
 # ============================================================================
@@ -271,7 +272,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("Story Builder Backend Starting...")
+    print("Story Builder Backend Starting - Phase 2.1")
     print("=" * 60)
     print(f"Backend API: http://localhost:5000")
     print(f"Projects directory: {PROJECTS_DIR}")

@@ -5,11 +5,11 @@ import styles from './styles';
 const Glossary = ({ data, addItem, updateItem, removeItem, onViewModeChange }) => (
   <div style={styles.form}>
     <ListDetail
-      items={data.glossary || []}
+      items={data.terms || []}
       itemLabel={(it, i) => it.term || `Term ${i + 1}`}
-      onAdd={() => addItem('glossary')}
-      onRemove={(index) => removeItem('glossary', index)}
-      onUpdate={(index, field, value) => updateItem('glossary', index, field, value)}
+      onAdd={() => addItem('terms')}
+      onRemove={(index) => removeItem('terms', index)}
+      onUpdate={(index, field, value) => updateItem('terms', index, field, value)}
       title={'Glossary'}
       addLabel={'+ Add Term'}
       emptyMessage={'No terms yet.'}

@@ -13,7 +13,7 @@ const Content = ({ data, addItem, updateItem, removeItem, onViewModeChange }) =>
       previewFields={['name','type','rarity']}
   openDetailOnAdd={true}
   onViewModeChange={onViewModeChange}
-      title={'Items & Hazards'}
+  title={'Items'}
       addLabel={'+ Add Item'}
       emptyMessage={'No items yet.'}
       renderItemEditor={(item, index, updateField) => (

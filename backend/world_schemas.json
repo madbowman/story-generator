@@ -158,31 +158,6 @@
         "weight": "number - Weight in pounds",
         "requiresAttunement": "boolean - Needs attunement"
       }
-    ],
-    "hazards": [
-      {
-        "id": "string - unique_id_lowercase",
-        "name": "string - Hazard name",
-        "type": "string - trap/environmental/magical/etc",
-        "severity": "string - minor/moderate/deadly",
-        "description": "string - Hazard description",
-        "trigger": "string - What triggers it",
-        "effect": "string - What it does",
-        "detection": "string - How to detect (DC)",
-        "disarm": "string - How to disarm (DC)"
-      }
-    ],
-    "machines": [
-      {
-        "id": "string - unique_id_lowercase",
-        "name": "string - Machine name",
-        "type": "string - vehicle/construct/device/etc",
-        "description": "string - Machine description",
-        "purpose": "string - What it does",
-        "operation": "string - How to operate it",
-        "creator": "string - Who built it",
-        "location": "string - location_id where found"
-      }
     ]
   }
 }

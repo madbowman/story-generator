@@ -1,7 +1,6 @@
 """
 Consistency Validator Module
 Validates logical consistency in world building and stories
-Phase 1: Basic world validation
 """
 
 import json
@@ -40,7 +39,7 @@ class ConsistencyValidator:
         elif scope == 'episode':
             return {
                 'success': False,
-                'message': 'Episode validation available in Phase 2'
+                'message': 'Episode validation available in Phase 3'
             }
         
         return {
@@ -147,7 +146,6 @@ class ConsistencyValidator:
         suggestions = []
         
         places = locations.get('places', [])
-        routes = locations.get('routes', [])
         
         # Check for duplicate location IDs
         location_ids = [p.get('id') for p in places if p.get('id')]
@@ -159,45 +157,22 @@ class ConsistencyValidator:
                 'suggestion': 'Ensure each location has a unique ID'
             })
         
-        # Check routes reference valid locations
-        place_ids_set = set(location_ids)
-        for route in routes:
-            from_id = route.get('from')
-            to_id = route.get('to')
-            
-            if from_id not in place_ids_set:
+        # Check for missing required fields
+        for place in places:
+            if not place.get('name'):
                 warnings.append({
-                    'type': 'invalid_route',
+                    'type': 'missing_location_name',
                     'severity': 'high',
-                    'message': f'Route references non-existent location: {from_id}',
-                    'suggestion': f'Remove route or create location with ID: {from_id}'
+                    'message': f'Location with ID {place.get("id", "unknown")} is missing a name',
+                    'suggestion': 'Add a name to all locations'
                 })
             
-            if to_id not in place_ids_set:
-                warnings.append({
-                    'type': 'invalid_route',
-                    'severity': 'high',
-                    'message': f'Route references non-existent location: {to_id}',
-                    'suggestion': f'Remove route or create location with ID: {to_id}'
+            if not place.get('type'):
+                suggestions.append({
+                    'type': 'missing_location_type',
+                    'message': f'Location "{place.get("name", "unknown")}" is missing a type',
+                    'suggestion': 'Specify location type (city/town/village/dungeon/wilderness/etc)'
                 })
-            
-            # Check travel time is reasonable
-            travel_time = route.get('travel_time_hours', 0)
-            if travel_time <= 0:
-                warnings.append({
-                    'type': 'invalid_travel_time',
-                    'severity': 'medium',
-                    'message': f'Route {from_id} -> {to_id} has invalid travel time',
-                    'suggestion': 'Set realistic travel time in hours'
-                })
-        
-        # Suggest adding routes if locations exist but no routes defined
-        if len(places) > 1 and len(routes) == 0:
-            suggestions.append({
-                'type': 'missing_routes',
-                'message': 'You have multiple locations but no routes defined',
-                'suggestion': 'Consider adding travel routes between locations'
-            })
         
         return {'warnings': warnings, 'suggestions': suggestions}
     
@@ -236,6 +211,16 @@ class ConsistencyValidator:
                         'message': f'Character {character.get("name")} has relationship with non-existent character ID: {related_id}',
                         'suggestion': 'Remove relationship or create the referenced character'
                     })
+            
+            # Check currentLocation references valid location
+            current_loc = character.get('currentLocation')
+            if current_loc and current_loc not in place_ids:
+                warnings.append({
+                    'type': 'invalid_location',
+                    'severity': 'medium',
+                    'message': f'Character {character.get("name")} is at non-existent location: {current_loc}',
+                    'suggestion': 'Update currentLocation to valid location ID or create the location'
+                })
         
         return {'warnings': warnings, 'suggestions': suggestions}
     

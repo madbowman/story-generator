@@ -32,7 +32,7 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
     { id: 'factions', label: 'Factions', icon: '⚔️' },
     { id: 'religions', label: 'Religions', icon: '✨' },
     { id: 'glossary', label: 'Glossary', icon: '📖' },
-    { id: 'content', label: 'Items & Hazards', icon: '🎒' },
+  { id: 'content', label: 'Items', icon: '🎒' },
   ];
 
   useEffect(() => {
@@ -78,10 +78,9 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
   };
 
   const addItem = (arrayField) => {
+    // Create new item based on array field type
     const newItem = arrayField === 'places' 
       ? { id: Date.now().toString(), name: '', type: '', description: '' }
-      : arrayField === 'routes'
-      ? { from: '', to: '', mode: '', distance_km: 0, travel_time_hours: 0 }
       : arrayField === 'characters'
       ? { id: Date.now().toString(), name: '', role: '', description: '', personality: '', backstory: '', skills: [], weaknesses: [], relationships: [] }
       : { id: Date.now().toString(), name: '', description: '' };

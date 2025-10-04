@@ -1,7 +1,7 @@
 /**
- * World Builder Chat Component
- * Enhanced version of AIChat specifically for world building
- * Includes "Build World" button that extracts conversation data
+ * World Builder Chat Component - Phase 2.1
+ * Two-step process: Generate Summary → Build World
+ * AI creates structured summary, system extracts from it
  */
 import { useState, useRef, useEffect } from 'react';
 import { useProject } from '../../context/ProjectContext';
@@ -25,27 +25,22 @@ export default function WorldBuilderChat() {
   });
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [schemas, setSchemas] = useState(null);
   const [selectedModel, setSelectedModel] = useState('llama3.2');
   const [temperature, setTemperature] = useState(0.8);
+  const [hasSummary, setHasSummary] = useState(false);
   const messagesEndRef = useRef(null);
 
   // Load world schemas on mount
   useEffect(() => {
     const loadSchemas = async () => {
       try {
-        console.log('Loading schemas from: http://localhost:5000/api/world/schemas');
         const response = await fetch('http://localhost:5000/api/world/schemas');
-        console.log('Schema response status:', response.status);
         if (response.ok) {
           const data = await response.json();
-          console.log('Schemas loaded successfully:', data);
           setSchemas(data);
-        } else {
-          console.error('Failed to load schemas - HTTP', response.status);
-          const errorText = await response.text();
-          console.error('Error response:', errorText);
         }
       } catch (error) {
         console.error('Failed to load schemas:', error);
@@ -59,7 +54,7 @@ export default function WorldBuilderChat() {
     if (messages.length === 0 && currentProject) {
       const greeting = {
         role: 'assistant',
-        content: `Welcome! I'm ready to help you build the world for "${currentProject.title}".\n\n**How This Works:**\n\nWe'll discuss your world naturally, and when you want to lock in specific entities, use these commands:\n\n**Commands:**\n• \`ADD CHARACTER: name, role, description, age, race, class\`\n• \`ADD LOCATION: name, type, description, region\`\n• \`ADD FACTION: name, type, description\`\n• \`ADD RELIGION: name, type, description\`\n• \`ADD NPC: name, role, location, description\`\n• \`ADD ITEM: name, type, description\`\n• \`SET WORLD: name=..., description=..., timePeriod=...\`\n\n**Examples:**\n\`ADD CHARACTER: King Gnomus Sparkspanner, ruler, wise gnome king, 150, gnome, noble\`\n\`ADD LOCATION: Buzzlebury, city, underground gnome capital, Gnome Kingdom\`\n\`ADD FACTION: Gnome Kingdom, kingdom, underground realm of inventive gnomes\`\n\n**Workflow:**\n1. Discuss ideas with me naturally\n2. When happy with an element, use a command to add it\n3. I'll confirm each addition\n4. When done, click "Build World from Conversation"\n\nLet's start! Tell me about your world.`,
+        content: `Welcome! I'm ready to help you build the world for "${currentProject.title}".\n\n**Phase 2.1 Workflow:**\n\n1. **Discuss Naturally**: Tell me about your world - characters, locations, factions, religions, etc.\n2. **Generate Summary**: When ready, click "📝 Generate World Summary" and I'll create a structured summary\n3. **Build World**: Click "🌍 Build World from Summary" to extract the data into JSON files\n\n**Example Conversation:**\n"I'm creating a steampunk world with gnomes and goblins"\n"The gnomes live in Buzzlebury, an underground city"\n"King Gnomus rules the gnomes wisely"\n\nLet's start! Tell me about your world.`,
         timestamp: new Date().toISOString(),
       };
       setMessages([greeting]);
@@ -73,13 +68,22 @@ export default function WorldBuilderChat() {
   useEffect(() => {
     scrollToBottom();
     
-    // Save conversation to localStorage whenever messages change
+    // Save conversation to localStorage
     if (currentProject && messages.length > 0) {
       try {
         localStorage.setItem(`worldchat_${currentProject}`, JSON.stringify(messages));
       } catch (e) {
         console.error('Failed to save conversation:', e);
       }
+    }
+
+    // Check if last message is a summary
+    const lastMsg = messages[messages.length - 1];
+    if (lastMsg && lastMsg.role === 'assistant' && 
+        (lastMsg.content.includes('=== WORLD SUMMARY ===') || 
+         lastMsg.content.includes('=== CHARACTERS ===') ||
+         lastMsg.content.includes('=== LOCATIONS ==='))) {
+      setHasSummary(true);
     }
   }, [messages, currentProject]);
 
@@ -99,7 +103,6 @@ export default function WorldBuilderChat() {
     setIsGenerating(true);
 
     try {
-      // Build messages array with world-building system prompt
       const chatMessages = messages
         .concat(userMessage)
         .map(msg => ({
@@ -134,9 +137,168 @@ export default function WorldBuilderChat() {
     }
   };
 
-  const buildWorldFromConversation = async () => {
-    if (!currentProject || messages.length < 2) {
-      alert('Please have a conversation about your world first (at least 2 messages).');
+  const generateWorldSummary = async () => {
+    if (messages.length < 2) {
+      alert('Please have a conversation about your world first.');
+      return;
+    }
+
+    setIsGeneratingSummary(true);
+
+    try {
+      // Create system prompt for structured summary
+      const summaryPrompt = `Based on our conversation, please generate a complete structured world summary. Use this EXACT format with key-value pairs:
+
+=== WORLD SUMMARY ===
+
+=== WORLD INFO ===
+name: [world name]
+description: [brief world description]
+timePeriod: [time period or era]
+technologyLevel: [technology level]
+magicSystem: [how magic works if applicable]
+history: [key historical events]
+rulesPhysics: [special physics rules or laws]
+
+=== CHARACTERS ===
+[For each character, use this format with empty line between each:]
+id: [unique_id_lowercase]
+name: [full name]
+role: [protagonist/antagonist/supporting/mentor/etc]
+age: [number]
+race: [race/species]
+class: [DND class like warrior/mage/rogue]
+level: [1-20]
+alignment: [DND alignment]
+description: [physical description]
+personality: [personality traits]
+backstory: [backstory]
+motivation: [primary motivation]
+fears: [comma separated]
+skills: [comma separated skill:proficiency pairs]
+weaknesses: [comma separated]
+equipment: [comma separated]
+currentLocation: [location_id]
+
+=== LOCATIONS ===
+[For each location:]
+id: [unique_id_lowercase]
+name: [location name]
+type: [city/town/village/dungeon/wilderness/etc]
+region: [larger region]
+population: [number]
+description: [detailed description]
+government: [government type]
+economy: [economic activities]
+culture: [cultural notes]
+defenses: [defensive capabilities]
+notableFeatures: [comma separated]
+coords: x: [number], y: [number]
+
+=== FACTIONS ===
+[For each faction:]
+id: [unique_id_lowercase]
+name: [faction name]
+type: [guild/kingdom/cult/military/criminal/etc]
+alignment: [DND alignment]
+headquarters: [location_id]
+description: [faction description]
+goals: [comma separated]
+methods: [how they operate]
+leadership: [leadership structure]
+membership: [number]
+resources: [available resources]
+reputation: [how they're viewed]
+
+=== RELIGIONS ===
+[For each religion:]
+id: [unique_id_lowercase]
+name: [religion/deity name]
+type: [monotheistic/polytheistic/pantheon/cult/philosophy]
+alignment: [DND alignment]
+domain: [domain of influence]
+description: [religion description]
+beliefs: [comma separated core beliefs]
+practices: [comma separated practices]
+clergy: [clergy organization]
+followers: [number]
+influence: [low/moderate/high/dominant]
+symbols: [religious symbols/icons]
+
+=== NPCS ===
+[For each NPC:]
+id: [unique_id_lowercase]
+name: [NPC name]
+role: [merchant/guard/innkeeper/etc]
+location: [location_id]
+description: [brief description]
+personality: [key traits]
+services: [comma separated]
+questGiver: [true/false]
+attitude: [friendly/neutral/hostile]
+
+=== GLOSSARY ===
+[For each term:]
+term: [term or word]
+pronunciation: [how to pronounce]
+category: [place/person/magic/technology/creature/etc]
+definition: [definition]
+etymology: [origin]
+usage: [usage in context]
+
+=== ITEMS ===
+[For each item:]
+id: [unique_id_lowercase]
+name: [item name]
+type: [weapon/armor/potion/artifact/tool/etc]
+rarity: [common/uncommon/rare/legendary]
+description: [item description]
+properties: [special properties]
+value: [number]
+weight: [number]
+requiresAttunement: [true/false]
+
+Include ONLY the sections and entities we discussed. Use empty lines between entities. Be thorough and include all details we talked about.`;
+
+      const chatMessages = messages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      chatMessages.push({
+        role: 'user',
+        content: summaryPrompt
+      });
+
+      const result = await aiService.chat(chatMessages, {
+        model: selectedModel,
+        temperature: 0.3, // Lower temperature for structured output
+      });
+
+      if (result.success) {
+        const summaryMessage = {
+          role: 'assistant',
+          content: result.response,
+          timestamp: new Date().toISOString(),
+          isSummary: true
+        };
+        setMessages(prev => [...prev, summaryMessage]);
+        setHasSummary(true);
+
+        alert('World summary generated! Review it, then click "Build World from Summary" to create the JSON files.');
+      } else {
+        throw new Error(result.error);
+      }
+    } catch (error) {
+      alert(`Failed to generate summary: ${error.message}`);
+    } finally {
+      setIsGeneratingSummary(false);
+    }
+  };
+
+  const buildWorldFromSummary = async () => {
+    if (!hasSummary) {
+      alert('Please generate a world summary first.');
       return;
     }
 
@@ -145,14 +307,22 @@ export default function WorldBuilderChat() {
       return;
     }
 
-    // currentProject is the project ID string itself
-    const projectId = currentProject;
-    
-    console.log('Project ID:', projectId);
+    // Find the last summary message
+    const summaryMsg = [...messages].reverse().find(m => 
+      m.role === 'assistant' && (
+        m.content.includes('=== WORLD SUMMARY ===') ||
+        m.content.includes('=== CHARACTERS ===') ||
+        m.content.includes('=== LOCATIONS ===')
+      )
+    );
+
+    if (!summaryMsg) {
+      alert('Could not find summary message. Please generate summary again.');
+      return;
+    }
 
     const confirmed = window.confirm(
-      'This will analyze our conversation and create all world JSON files.\n\n' +
-      'This may take 30-60 seconds depending on the conversation length.\n\n' +
+      'This will extract the world data from the AI summary and create JSON files.\n\n' +
       'Are you ready to build the world?'
     );
 
@@ -162,12 +332,12 @@ export default function WorldBuilderChat() {
 
     try {
       const response = await fetch(
-        `http://localhost:5000/api/projects/${projectId}/world/build`,
+        `http://localhost:5000/api/projects/${currentProject}/world/build-from-summary`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            conversation: messages,
+            summary: summaryMsg.content,
             schemas: schemas
           })
         }
@@ -176,23 +346,21 @@ export default function WorldBuilderChat() {
       const result = await response.json();
 
       if (result.success) {
-        // Add success message to chat
         const successMessage = {
           role: 'system',
-          content: `✅ **World Built Successfully!**\n\nI've created these world files:\n\n${result.files_created.map(f => `• ${f}`).join('\n')}\n\nYou can now review and edit each section in the World Builder. If you want to make changes, you can either:\n1. Continue our conversation and rebuild\n2. Manually edit the JSON files in the World Builder tabs`,
+          content: `✅ **World Built Successfully!**\n\nCreated ${result.files_created.length} files:\n${result.files_created.map(f => `• ${f}`).join('\n')}\n\n**Entity Counts:**\n${Object.entries(result.entity_counts || {}).map(([k, v]) => `• ${k}: ${v}`).join('\n')}\n\nYou can now review and edit in the World Builder sections.`,
           timestamp: new Date().toISOString(),
         };
         setMessages(prev => [...prev, successMessage]);
 
-        // Reload project data
         if (reloadProject) {
           await reloadProject();
         }
 
         alert(
           `World built successfully!\n\n` +
-          `Created ${result.files_created.length} files:\n${result.files_created.join(', ')}\n\n` +
-          `Switch to the World Builder sections to review and edit.`
+          `Created ${result.files_created.length} files\n\n` +
+          `Switch to World Builder sections to review.`
         );
       } else {
         throw new Error(result.error || 'Failed to build world');
@@ -200,13 +368,6 @@ export default function WorldBuilderChat() {
     } catch (error) {
       console.error('Build error:', error);
       alert(`Failed to build world: ${error.message}`);
-      
-      const errorMessage = {
-        role: 'system',
-        content: `❌ **Build Failed**\n\nError: ${error.message}\n\nPlease try again or check the console for details.`,
-        timestamp: new Date().toISOString(),
-      };
-      setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsBuilding(false);
     }
@@ -215,7 +376,7 @@ export default function WorldBuilderChat() {
   const clearChat = () => {
     if (window.confirm('Clear all messages? This cannot be undone.')) {
       setMessages([]);
-      // Also clear from localStorage
+      setHasSummary(false);
       if (currentProject) {
         try {
           localStorage.removeItem(`worldchat_${currentProject}`);
@@ -239,7 +400,7 @@ export default function WorldBuilderChat() {
   return (
     <div style={styles.container}>
       <div style={styles.header}>
-        <h3 style={styles.title}>🌍 World Building Chat</h3>
+        <h3 style={styles.title}>🌍 World Building Chat - Phase 2.1</h3>
         <div style={styles.controls}>
           <select
             value={selectedModel}
@@ -293,33 +454,46 @@ export default function WorldBuilderChat() {
           </div>
         )}
         
+        {isGeneratingSummary && (
+          <div style={styles.summaryIndicator}>
+            <div style={styles.spinner}>📝</div>
+            <span style={styles.summaryText}>Generating structured world summary...</span>
+          </div>
+        )}
+        
         {isBuilding && (
           <div style={styles.buildingIndicator}>
             <div style={styles.spinner}>⏳</div>
-            <span style={styles.buildingText}>Building world files... This may take 30-60 seconds...</span>
+            <span style={styles.buildingText}>Extracting world data from summary...</span>
           </div>
         )}
         
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Build World Button */}
-      <div style={styles.buildButtonContainer}>
+      {/* Two-Step Action Buttons */}
+      <div style={styles.actionButtons}>
         <button
-          onClick={buildWorldFromConversation}
-          disabled={isBuilding || isGenerating || messages.length < 2}
+          onClick={generateWorldSummary}
+          disabled={isGeneratingSummary || isGenerating || isBuilding || messages.length < 2}
           style={{
-            ...styles.buildButton,
-            ...(isBuilding || isGenerating || messages.length < 2 ? styles.buildButtonDisabled : {})
+            ...styles.summaryButton,
+            ...(isGeneratingSummary || isGenerating || isBuilding || messages.length < 2 ? styles.buttonDisabled : {})
           }}
         >
-          {isBuilding ? '⏳ Building World...' : '🌍 Build World from Conversation'}
+          {isGeneratingSummary ? '📝 Generating...' : '📝 Generate World Summary'}
         </button>
-        {messages.length < 2 && (
-          <p style={styles.buildHint}>
-            Have a conversation with the AI first, then build your world
-          </p>
-        )}
+        
+        <button
+          onClick={buildWorldFromSummary}
+          disabled={!hasSummary || isBuilding || isGenerating || isGeneratingSummary}
+          style={{
+            ...styles.buildButton,
+            ...(!hasSummary || isBuilding || isGenerating || isGeneratingSummary ? styles.buttonDisabled : {})
+          }}
+        >
+          {isBuilding ? '⏳ Building...' : '🌍 Build World from Summary'}
+        </button>
       </div>
 
       {/* Input Form */}
@@ -336,15 +510,15 @@ export default function WorldBuilderChat() {
           placeholder="Describe your world, characters, locations... (Shift+Enter for new line)"
           style={styles.input}
           rows={3}
-          disabled={isGenerating || isBuilding}
+          disabled={isGenerating || isBuilding || isGeneratingSummary}
         />
         <button 
           type="submit" 
           style={{
             ...styles.sendButton,
-            ...((!input.trim() || isGenerating || isBuilding) ? styles.sendButtonDisabled : {})
+            ...((!input.trim() || isGenerating || isBuilding || isGeneratingSummary) ? styles.sendButtonDisabled : {})
           }}
-          disabled={!input.trim() || isGenerating || isBuilding}
+          disabled={!input.trim() || isGenerating || isBuilding || isGeneratingSummary}
         >
           Send
         </button>
@@ -356,15 +530,20 @@ export default function WorldBuilderChat() {
 function Message({ message }) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
+  const isSummary = message.isSummary || (
+    message.role === 'assistant' && 
+    (message.content.includes('=== WORLD SUMMARY ===') ||
+     message.content.includes('=== CHARACTERS ==='))
+  );
 
   return (
     <div style={{
       ...styles.message,
-      ...(isUser ? styles.userMessage : isSystem ? styles.systemMessage : styles.aiMessage)
+      ...(isUser ? styles.userMessage : isSystem ? styles.systemMessage : isSummary ? styles.summaryMessage : styles.aiMessage)
     }}>
       <div style={styles.messageHeader}>
         <span style={styles.messageRole}>
-          {isUser ? '👤 You' : isSystem ? '⚠️ System' : '🤖 AI'}
+          {isUser ? '👤 You' : isSystem ? '⚠️ System' : isSummary ? '📝 AI Summary' : '🤖 AI'}
         </span>
         <span style={styles.messageTime}>
           {new Date(message.timestamp).toLocaleTimeString()}
@@ -469,6 +648,13 @@ const styles = {
     alignSelf: 'flex-start',
     border: '1px solid #444',
   },
+  summaryMessage: {
+    backgroundColor: '#7c3aed',
+    color: '#fff',
+    alignSelf: 'flex-start',
+    border: '1px solid #6d28d9',
+    maxWidth: '90%',
+  },
   systemMessage: {
     backgroundColor: '#10b981',
     color: '#fff',
@@ -505,6 +691,16 @@ const styles = {
     alignSelf: 'flex-start',
     border: '1px solid #444',
   },
+  summaryIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '12px',
+    backgroundColor: '#7c3aed',
+    borderRadius: '8px',
+    alignSelf: 'center',
+    border: '1px solid #6d28d9',
+  },
   buildingIndicator: {
     display: 'flex',
     alignItems: 'center',
@@ -527,21 +723,37 @@ const styles = {
     color: '#aaa',
     fontSize: '13px',
   },
+  summaryText: {
+    color: '#fff',
+    fontSize: '13px',
+    fontWeight: '500',
+  },
   buildingText: {
     color: '#fff',
     fontSize: '13px',
     fontWeight: '500',
   },
-  buildButtonContainer: {
+  actionButtons: {
     padding: '12px 16px',
     borderTop: '1px solid #444',
     borderBottom: '1px solid #444',
     display: 'flex',
-    flexDirection: 'column',
-    gap: '8px',
+    gap: '12px',
+  },
+  summaryButton: {
+    flex: 1,
+    padding: '14px 20px',
+    backgroundColor: '#7c3aed',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '15px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
   },
   buildButton: {
-    width: '100%',
+    flex: 1,
     padding: '14px 20px',
     backgroundColor: '#10b981',
     color: '#fff',
@@ -552,16 +764,10 @@ const styles = {
     cursor: 'pointer',
     transition: 'background-color 0.2s',
   },
-  buildButtonDisabled: {
+  buttonDisabled: {
     backgroundColor: '#374151',
     cursor: 'not-allowed',
     opacity: 0.5,
-  },
-  buildHint: {
-    margin: 0,
-    fontSize: '12px',
-    color: '#6b7280',
-    textAlign: 'center',
   },
   inputForm: {
     padding: '16px',

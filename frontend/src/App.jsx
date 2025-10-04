@@ -72,7 +72,7 @@ function MainApp() {
     { id: 'factions', label: 'Factions', icon: '⚔️' },
     { id: 'religions', label: 'Religions', icon: '✨' },
     { id: 'glossary', label: 'Glossary', icon: '📖' },
-    { id: 'content', label: 'Items & Hazards', icon: '🎒' },
+  { id: 'content', label: 'Items', icon: '🎒' },
   ];
 
   return (
