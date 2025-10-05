@@ -245,6 +245,67 @@ class WorldExtractor:
         """Parse value based on schema type"""
         schema_hint = schema.get(key, '')
         
+        # Special handling for relationships
+        if key == 'relationships':
+            relationships = []
+            
+            # Handle "none" case
+            if value.strip().lower() == 'none':
+                return []
+            
+            # Split by pipe | to get individual relationships
+            parts = value.split('|')
+            
+            for part in parts:
+                part = part.strip()
+                if ':' not in part:
+                    continue
+                    
+                components = [c.strip() for c in part.split(':')]
+                
+                # Character relationships: character_id:type:status:description
+                if len(components) >= 4:
+                    rel = {
+                        'character_id': components[0],
+                        'type': components[1],
+                        'status': components[2],
+                        'description': ':'.join(components[3:])
+                    }
+                    relationships.append(rel)
+                # Faction/Religion relationships: id:status:description
+                elif len(components) == 3:
+                    # Check schema hint to determine relationship type
+                    schema_str = str(schema_hint).lower()
+                    
+                    if 'faction_id' in schema_str or 'faction' in schema_str:
+                        rel = {
+                            'faction_id': components[0],
+                            'status': components[1],
+                            'description': components[2]
+                        }
+                        relationships.append(rel)
+                    elif 'religion_id' in schema_str or 'religion' in schema_str:
+                        rel = {
+                            'religion_id': components[0],
+                            'status': components[1],
+                            'description': components[2]
+                        }
+                        relationships.append(rel)
+                    # If unclear, skip this relationship with a warning
+                    else:
+                        print(f"Warning: Unclear relationship format: {part}")
+                        continue
+            
+            return relationships
+        
+        # Special handling for members array (faction members)
+        if key == 'members':
+            return [item.strip() for item in re.split(r'[,;]', value) if item.strip()]
+        
+        # Special handling for temples array (location IDs)
+        if key == 'temples':
+            return [item.strip() for item in re.split(r'[,;]', value) if item.strip()]
+        
         # Check if it's a number
         if 'number' in str(schema_hint).lower():
             try:
@@ -260,19 +321,17 @@ class WorldExtractor:
         
         # Check if it's an array
         if 'array' in str(schema_hint).lower() or isinstance(schema.get(key), list):
-            # Split by comma or semicolon
             return [item.strip() for item in re.split(r'[,;]', value) if item.strip()]
         
         # Check if it's an object (like coords)
         if key == 'coords' or isinstance(schema.get(key), dict):
-            # Try to parse x,y format
             if match := re.match(r'x:\s*(\d+),?\s*y:\s*(\d+)', value.lower()):
                 return {'x': int(match.group(1)), 'y': int(match.group(2))}
             return {'x': 0, 'y': 0}
         
         # Default: return as string
         return value
-    
+
     def _generate_id(self, name: str) -> str:
         """Generate unique ID from name"""
         return name.lower().replace(' ', '_').replace("'", '').replace('"', '')

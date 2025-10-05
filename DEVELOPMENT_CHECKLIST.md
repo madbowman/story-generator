@@ -128,14 +128,14 @@
   - [x] Integration with project reloading
 
 ### API Endpoints ✅
-- [x] `GET /api/world/schemas` - Get DND-style world schemas
+- [x] `GET /api/world/schemas` - Get world schemas
 - [x] `POST /api/projects/<id>/world/build` - Build world from structured commands
 
 ### Data Schemas ✅
-- [x] **world_schemas.json** - DND-style templates
+- [x] **world_schemas.json** - templates
   - [x] world_overview schema
   - [x] locations schema (places)
-  - [x] characters schema (DND attributes)
+  - [x] characters schema (attributes)
   - [x] npcs schema
   - [x] factions schema
   - [x] religions schema

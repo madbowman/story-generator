@@ -148,7 +148,7 @@ export default function WorldBuilderChat() {
     setIsGeneratingSummary(true);
 
     try {
-      // Create system prompt for structured summary
+      // Create system prompt for structured summary with explicit relationship examples
       const summaryPrompt = `Based on our conversation, please generate a complete structured world summary. Use this EXACT format with key-value pairs:
 
 === WORLD SUMMARY ===
@@ -163,24 +163,52 @@ history: [key historical events]
 rulesPhysics: [special physics rules or laws]
 
 === CHARACTERS ===
-[For each character, use this format with empty line between each:]
+[For each character, use this EXACT format with empty line between each. ALL fields including currentLocation are REQUIRED:]
+
 id: [unique_id_lowercase]
 name: [full name]
 role: [protagonist/antagonist/supporting/mentor/etc]
-age: [number]
+age: [number only]
 race: [race/species]
-class: [DND class like warrior/mage/rogue]
-level: [1-20]
-alignment: [DND alignment]
+class: [character class/profession]
+level: [number only - experience level 1-20]
+alignment: [moral alignment]
 description: [physical description]
 personality: [personality traits]
 backstory: [backstory]
 motivation: [primary motivation]
 fears: [comma separated]
-skills: [comma separated skill:proficiency pairs]
+skills: [comma separated skill:proficiency pairs like "combat:expert, magic:novice"]
 weaknesses: [comma separated]
 equipment: [comma separated]
-currentLocation: [location_id]
+relationships: [other_character_id:type:status:description | other_character_id:type:status:description]
+currentLocation: [location_id where character is now]
+
+COMPLETE EXAMPLE CHARACTER:
+id: hero_john
+name: John Smith
+role: protagonist
+age: 25
+race: Human
+class: Warrior
+level: 5
+alignment: Neutral Good
+description: Tall with dark hair and blue eyes
+personality: Brave, loyal, and determined
+backstory: Grew up in a small village, trained as a warrior
+motivation: Protect the innocent and find his lost sister
+fears: Failure, losing loved ones
+skills: combat:expert, leadership:novice, survival:proficient
+weaknesses: Impulsive, overly trusting
+equipment: Steel sword, wooden shield, leather armor
+relationships: mentor_bob:mentor:strong:Trained me since childhood | sister_jane:sibling:missing:Searching for her
+currentLocation: castle_town
+
+CRITICAL REQUIREMENTS:
+- Every character MUST have a relationships line (use "relationships: none" if no relationships)
+- Every character MUST have a currentLocation using a valid location_id from LOCATIONS section
+- Age and level must be numbers only
+- Use pipe | to separate multiple relationships
 
 === LOCATIONS ===
 [For each location:]
@@ -202,7 +230,7 @@ coords: x: [number], y: [number]
 id: [unique_id_lowercase]
 name: [faction name]
 type: [guild/kingdom/cult/military/criminal/etc]
-alignment: [DND alignment]
+alignment: [moral alignment]
 headquarters: [location_id]
 description: [faction description]
 goals: [comma separated]
@@ -211,21 +239,34 @@ leadership: [leadership structure]
 membership: [number]
 resources: [available resources]
 reputation: [how they're viewed]
+relationships: [other_faction_id:status:description | other_faction_id:status:description]
+members: [comma separated character_ids]
+
+FACTION RELATIONSHIP EXAMPLES:
+relationships: shadow_guild:enemy:At war for decades | merchant_league:allied:Trade partners
+relationships: none
 
 === RELIGIONS ===
 [For each religion:]
 id: [unique_id_lowercase]
 name: [religion/deity name]
 type: [monotheistic/polytheistic/pantheon/cult/philosophy]
-alignment: [DND alignment]
+alignment: [moral alignment]
 domain: [domain of influence]
 description: [religion description]
 beliefs: [comma separated core beliefs]
 practices: [comma separated practices]
 clergy: [clergy organization]
+temples: [comma separated location_ids]
 followers: [number]
 influence: [low/moderate/high/dominant]
+relationships: [other_religion_id:status:description | other_religion_id:status:description]
+holyDays: [comma separated]
 symbols: [religious symbols/icons]
+
+RELIGION RELATIONSHIP EXAMPLES:
+relationships: sun_worship:allied:Share similar beliefs | death_cult:opposed:Theological enemies
+relationships: none
 
 === NPCS ===
 [For each NPC:]
@@ -260,7 +301,14 @@ value: [number]
 weight: [number]
 requiresAttunement: [true/false]
 
-Include ONLY the sections and entities we discussed. Use empty lines between entities. Be thorough and include all details we talked about.`;
+CRITICAL INSTRUCTIONS:
+1. Include ONLY the sections and entities we discussed
+2. Use empty lines between entities
+3. EVERY character must have a relationships line
+4. Level must be a NUMBER only (1-20)
+5. Age must be a NUMBER only
+6. Use the pipe | symbol to separate multiple relationships
+7. Be thorough and include all details we talked about`;
 
       const chatMessages = messages.map(msg => ({
         role: msg.role,
@@ -402,7 +450,7 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
   return (
     <div style={chatStyles.container}>
       <div style={chatStyles.header}>
-  <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
+        <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
         <div style={chatStyles.controls}>
           <select
             value={selectedModel}
@@ -415,7 +463,7 @@ Include ONLY the sections and entities we discussed. Use empty lines between ent
             <option value="mistral">mistral</option>
           </select>
           
-            <div style={chatStyles.tempControl}>
+          <div style={chatStyles.tempControl}>
             <label style={chatStyles.tempLabel} title="Creativity Level">
               🌡️ {temperature.toFixed(1)}
             </label>

@@ -33,7 +33,7 @@ A desktop application for creating serialized episodic stories through human-AI 
 - **Automatic Extraction** - System parses summary into JSON files
 - **Schema-Perfect Output** - Matches world_schemas.json exactly
 - World overview, locations, characters, NPCs, factions, religions
-- DND-style schemas and formatting
+- schemas and formatting
 - Automatic ID generation from names
 - JSON file storage with validation
 
@@ -325,7 +325,7 @@ age: [number]
 race: [race/species]
 class: [warrior/mage/rogue/etc]
 level: [1-20]
-alignment: [DND alignment]
+alignment: [alignment]
 description: [physical description]
 personality: [traits]
 backstory: [backstory]
@@ -358,7 +358,7 @@ coords: x: [number], y: [number]
 id: [auto-generated from name]
 name: [faction name]
 type: [guild/kingdom/cult/military/criminal]
-alignment: [DND alignment]
+alignment: [alignment]
 headquarters: [location_id]
 description: [faction description]
 goals: [comma separated]
@@ -374,7 +374,7 @@ reputation: [how they're viewed]
 id: [auto-generated from name]
 name: [religion/deity name]
 type: [monotheistic/polytheistic/pantheon/cult/philosophy]
-alignment: [DND alignment]
+alignment: [alignment]
 domain: [domain of influence]
 description: [religion description]
 beliefs: [comma separated]
@@ -422,7 +422,7 @@ story-generator/
 ├── backend/
 │   ├── app.py                          # Flask application (Phase 2.1)
 │   ├── requirements.txt                # Python dependencies
-│   ├── world_schemas.json              # DND-style world schemas
+│   ├── world_schemas.json              # world schemas
 │   └── modules/
 │       ├── ai_integration/
 │       │   └── ollama_client.py        # Ollama API client
@@ -592,7 +592,7 @@ story-generator/
 ### ✅ Phase 2 - Structured Commands (Complete)
 - Command-based world building
 - Conversation persistence
-- DND-style schemas
+- World schemas
 - Accurate extraction
 
 ### ✅ Phase 2.1 - AI Summary Extraction (Complete)
