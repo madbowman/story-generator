@@ -23,6 +23,34 @@ class WorldBuilder:
         'content'
     ]
     
+    def __init__(self, projects_dir: Path):
+        """Initialize WorldBuilder with projects directory"""
+        self.projects_dir = projects_dir
+
+    def load_world_section(self, project_id: str, section: str) -> Dict:
+        """
+        Load a specific world section - used by world context endpoint
+        
+        Args:
+            project_id: Project ID
+            section: Section name (world_overview, characters, etc.)
+            
+        Returns:
+            Dict with section data or empty dict if not found
+        """
+        try:
+            world_dir = self.projects_dir / project_id / 'world'
+            file_path = world_dir / f'{section}.json'
+            
+            if not file_path.exists():
+                return {}
+            
+            with open(file_path, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except Exception as e:
+            print(f"Error loading section {section}: {e}")
+            return {}
+    
     def get_section(self, 
                    projects_dir: Path, 
                    project_id: str, 

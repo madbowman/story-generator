@@ -9,7 +9,7 @@ import { aiService } from '../../services/api';
 
 import chatStyles from '../../styles/aichat/styles';
 
-export default function WorldBuilderChat() {
+export default function WorldBuilderChat({ selectedModel }) {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
     // Load saved conversation for this project from localStorage
@@ -30,7 +30,7 @@ export default function WorldBuilderChat() {
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
   const [schemas, setSchemas] = useState(null);
-  const [selectedModel, setSelectedModel] = useState('llama3.2');
+  // selectedModel is provided via props from App -> AIStatus
   const [temperature, setTemperature] = useState(0.8);
   const [hasSummary, setHasSummary] = useState(false);
   const messagesEndRef = useRef(null);
@@ -452,17 +452,6 @@ CRITICAL INSTRUCTIONS:
       <div style={chatStyles.header}>
         <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
         <div style={chatStyles.controls}>
-          <select
-            value={selectedModel}
-            onChange={(e) => setSelectedModel(e.target.value)}
-            style={chatStyles.modelSelect}
-            title="AI Model"
-          >
-            <option value="llama3.2">llama3.2</option>
-            <option value="llama3.1">llama3.1</option>
-            <option value="mistral">mistral</option>
-          </select>
-          
           <div style={chatStyles.tempControl}>
             <label style={chatStyles.tempLabel} title="Creativity Level">
               🌡️ {temperature.toFixed(1)}

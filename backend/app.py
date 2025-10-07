@@ -14,20 +14,24 @@ from modules.world_builder.project_manager import ProjectManager
 from modules.world_builder.world_builder import WorldBuilder
 from modules.world_builder.world_extractor import WorldExtractor
 from modules.consistency.validator import ConsistencyValidator
+from modules.story_engine import ArcManager, ArcExtractor
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# Initialize managers
-ollama = OllamaClient()
-project_manager = ProjectManager()
-world_builder = WorldBuilder()
-world_extractor = WorldExtractor(ollama)
-consistency_validator = ConsistencyValidator()
-
 # ADDED: Setup projects directory
 PROJECTS_DIR = Path(__file__).parent.parent / 'projects'
 PROJECTS_DIR.mkdir(exist_ok=True)
+
+# Initialize managers
+ollama = OllamaClient()
+project_manager = ProjectManager()
+world_builder = WorldBuilder(PROJECTS_DIR)
+world_extractor = WorldExtractor(ollama)
+consistency_validator = ConsistencyValidator()
+
+arc_manager = ArcManager(PROJECTS_DIR)
+arc_extractor = ArcExtractor()
 
 # ============================================================================
 # AI ENDPOINTS
@@ -241,6 +245,244 @@ def build_world_from_summary(project_id):
         return jsonify(result), 200
     else:
         return jsonify(result), 400
+    
+# ============================================================================
+# ARC ENDPOINTS - Phase 3
+# ============================================================================
+
+@app.route('/api/arc/schemas', methods=['GET'])
+def get_arc_schemas():
+    """Get arc schema templates"""
+    try:
+        schema_path = Path(__file__).parent / 'arc_schemas.json'
+        
+        if not schema_path.exists():
+            return jsonify({
+                'success': False,
+                'error': 'Arc schemas file not found'
+            }), 404
+        
+        with open(schema_path, 'r', encoding='utf-8') as f:
+            schemas = json.load(f)
+        
+        return jsonify(schemas)
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs', methods=['GET'])
+def get_project_arcs(project_id):
+    """Get all arcs for a project"""
+    try:
+        arcs_data = arc_manager.load_arcs(project_id)
+        return jsonify({
+            'success': True,
+            'arcs': arcs_data.get('arcs', []),
+            'metadata': arcs_data.get('metadata', {})
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['GET'])
+def get_project_arc(project_id, arc_id):
+    """Get a specific arc"""
+    try:
+        result = arc_manager.get_arc(project_id, arc_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs', methods=['POST'])
+def create_arc(project_id):
+    """Create a new arc"""
+    try:
+        arc_data = request.json
+        
+        if not arc_data:
+            return jsonify({
+                'success': False,
+                'error': 'No arc data provided'
+            }), 400
+        
+        result = arc_manager.add_arc(project_id, arc_data)
+        
+        if result['success']:
+            return jsonify(result), 201
+        else:
+            return jsonify(result), 400
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['PUT'])
+def update_arc(project_id, arc_id):
+    """Update an existing arc"""
+    try:
+        arc_data = request.json
+        
+        if not arc_data:
+            return jsonify({
+                'success': False,
+                'error': 'No arc data provided'
+            }), 400
+        
+        result = arc_manager.update_arc(project_id, arc_id, arc_data)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['DELETE'])
+def delete_arc(project_id, arc_id):
+    """Delete an arc"""
+    try:
+        result = arc_manager.delete_arc(project_id, arc_id)
+        
+        if result['success']:
+            return jsonify(result)
+        else:
+            return jsonify(result), 404
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/build-from-summary', methods=['POST'])
+def build_arcs_from_summary(project_id):
+    """Build arcs from AI-generated summary"""
+    try:
+        data = request.json
+        summary = data.get('summary', '')
+        schemas = data.get('schemas', {})
+        
+        if not summary:
+            return jsonify({
+                'success': False,
+                'error': 'No summary provided'
+            }), 400
+        
+        # Load world data for context/validation
+        world_data = {
+            'characters': world_builder.load_world_section(project_id, 'characters'),
+            'locations': world_builder.load_world_section(project_id, 'locations'),
+            'factions': world_builder.load_world_section(project_id, 'factions')
+        }
+        
+        # Extract arcs from summary
+        extraction_result = arc_extractor.extract_from_ai_summary(
+            summary, schemas, world_data
+        )
+        
+        if not extraction_result['success']:
+            return jsonify(extraction_result), 400
+        
+        # Load existing arcs
+        arcs_data = arc_manager.load_arcs(project_id)
+        
+        # Add extracted arcs
+        added_arcs = []
+        skipped_arcs = []
+        
+        for arc in extraction_result['arcs']:
+            # Check if ID already exists
+            existing_ids = [a['id'] for a in arcs_data['arcs']]
+            if arc['id'] in existing_ids:
+                skipped_arcs.append(arc['id'])
+                continue
+            
+            arcs_data['arcs'].append(arc)
+            added_arcs.append(arc['id'])
+        
+        # Save all arcs
+        if arc_manager.save_arcs(project_id, arcs_data):
+            return jsonify({
+                'success': True,
+                'arcs_added': added_arcs,
+                'arcs_skipped': skipped_arcs,
+                'total_arcs': len(arcs_data['arcs']),
+                'message': f"Successfully added {len(added_arcs)} arc(s)"
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': 'Failed to save arcs'
+            }), 500
+            
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/season/<int:season>', methods=['GET'])
+def get_arcs_by_season(project_id, season):
+    """Get all arcs for a specific season"""
+    try:
+        arcs = arc_manager.get_arcs_by_season(project_id, season)
+        
+        return jsonify({
+            'success': True,
+            'season': season,
+            'arcs': arcs,
+            'count': len(arcs)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/world/context', methods=['GET'])
+def get_world_context(project_id):
+    """Get complete world context for arc planning"""
+    try:
+        context = {
+            'characters': world_builder.load_world_section(project_id, 'characters'),
+            'locations': world_builder.load_world_section(project_id, 'locations'),
+            'factions': world_builder.load_world_section(project_id, 'factions'),
+            'religions': world_builder.load_world_section(project_id, 'religions'),
+            'npcs': world_builder.load_world_section(project_id, 'npcs'),
+            'world_overview': world_builder.load_world_section(project_id, 'world_overview')
+        }
+        
+        return jsonify({
+            'success': True,
+            'context': context
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 # ============================================================================
 # HEALTH CHECK

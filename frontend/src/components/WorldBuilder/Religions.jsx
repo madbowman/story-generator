@@ -11,8 +11,8 @@ const Religions = ({ data, addItem, updateItem, removeItem, onViewModeChange }) 
       onRemove={(index) => removeItem('religions', index)}
       onUpdate={(index, field, value) => updateItem('religions', index, field, value)}
       previewFields={['name','domain','influence']}
-  openDetailOnAdd={true}
-  onViewModeChange={onViewModeChange}
+      openDetailOnAdd={true}
+      onViewModeChange={onViewModeChange}
       title={'Religions'}
       addLabel={'+ Add Religion'}
       emptyMessage={'No religions yet.'}

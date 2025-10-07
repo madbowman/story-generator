@@ -1,6 +1,7 @@
 /**
  * Story Builder App - Main Application
- * Phase 2: Added World Builder Chat
+ * Phase 2.1: World Builder with Relationships
+ * Phase 3: Story Arcs
  */
 import { useState } from 'react';
 import { ProjectProvider, useProject } from './context/ProjectContext';
@@ -8,6 +9,9 @@ import AIStatus from './components/AIStatus';
 import ProjectSelector from './components/ProjectSelector';
 import WorldBuilder from './components/WorldBuilder/WorldBuilder';
 import WorldBuilderChat from './components/WorldBuilder/WorldBuilderChat';
+import ArcBuilderChat from './components/ArcBuilder/ArcBuilderChat';
+import ArcManager from './components/ArcBuilder/ArcManager';
+import styles from './styles/app/styles';
 
 function App() {
   return (
@@ -34,9 +38,19 @@ function MainApp() {
     setSelectedModel(model);
     try { localStorage.setItem('selectedModel', model); } catch (e) {}
   };
+
   const [worldSubmenuOpen, setWorldSubmenuOpen] = useState(() => {
     try {
       const v = localStorage.getItem('worldSubmenuOpen');
+      return v === null ? true : v === 'true';
+    } catch (e) {
+      return true;
+    }
+  });
+
+  const [arcSubmenuOpen, setArcSubmenuOpen] = useState(() => {
+    try {
+      const v = localStorage.getItem('arcSubmenuOpen');
       return v === null ? true : v === 'true';
     } catch (e) {
       return true;
@@ -51,8 +65,13 @@ function MainApp() {
     });
   };
 
-  // sidebar collapse removed — always show full sidebar
-
+  const toggleArcSubmenu = () => {
+    setArcSubmenuOpen((prev) => {
+      const next = !prev;
+      try { localStorage.setItem('arcSubmenuOpen', next ? 'true' : 'false'); } catch (e) {}
+      return next;
+    });
+  };
 
   const handleWorldNavClick = () => {
     if (activeView !== 'world') {
@@ -61,6 +80,16 @@ function MainApp() {
       try { localStorage.setItem('worldSubmenuOpen', 'true'); } catch (e) {}
     } else {
       toggleWorldSubmenu();
+    }
+  };
+
+  const handleArcNavClick = () => {
+    if (activeView !== 'arc-chat' && activeView !== 'arc-manager') {
+      setActiveView('arc-chat');
+      setArcSubmenuOpen(true);
+      try { localStorage.setItem('arcSubmenuOpen', 'true'); } catch (e) {}
+    } else {
+      toggleArcSubmenu();
     }
   };
   
@@ -72,7 +101,7 @@ function MainApp() {
     { id: 'factions', label: 'Factions', icon: '⚔️' },
     { id: 'religions', label: 'Religions', icon: '✨' },
     { id: 'glossary', label: 'Glossary', icon: '📖' },
-  { id: 'content', label: 'Items', icon: '🎒' },
+    { id: 'content', label: 'Items', icon: '🎒' },
   ];
 
   return (
@@ -102,69 +131,131 @@ function MainApp() {
             <aside style={styles.sidebar}>
               <div style={{ padding: '8px 12px' }} />
               <nav style={styles.nav}>
-                <h3 style={styles.navTitle}>Project</h3>
+                <h3 style={styles.navTitle}>Navigation</h3>
                 
-                {/* PHASE 2: New World Builder Chat Button */}
-                <NavButton
-                  label="Build World Chat"
-                  icon="💬"
-                  active={activeView === 'world-chat'}
-                  onClick={() => setActiveView('world-chat')}
-                />
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                {/* PHASE 2.1: World Builder Section */}
+                <div style={{ marginBottom: '12px' }}>
+                  <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
+                    Phase 2.1: World Building
+                  </h4>
+                  
                   <NavButton
-                    label="World Builder"
-                    icon="🌍"
-                    active={activeView === 'world'}
-                    onClick={handleWorldNavClick}
+                    label="Build World Chat"
+                    icon="💬"
+                    active={activeView === 'world-chat'}
+                    onClick={() => setActiveView('world-chat')}
                   />
-                  <button
-                    style={styles.navToggle}
-                    onClick={toggleWorldSubmenu}
-                    aria-expanded={worldSubmenuOpen}
-                    aria-label="Toggle World Builder submenu"
-                  >
-                    {worldSubmenuOpen ? '▾' : '▸'}
-                  </button>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <NavButton
+                      label="World Builder"
+                      icon="🌍"
+                      active={activeView === 'world'}
+                      onClick={handleWorldNavClick}
+                    />
+                    <button
+                      style={styles.navToggle}
+                      onClick={toggleWorldSubmenu}
+                      aria-expanded={worldSubmenuOpen}
+                      aria-label="Toggle World Builder submenu"
+                    >
+                      {worldSubmenuOpen ? '▾' : '▸'}
+                    </button>
+                  </div>
+                  
+                  {activeView === 'world' && worldSubmenuOpen && (
+                    <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
+                      {sections.map((section) => (
+                        <button
+                          key={section.id}
+                          style={{
+                            ...styles.navButton,
+                            ...(activeSection === section.id ? styles.navButtonActive : {}),
+                            paddingLeft: '28px',
+                            fontSize: '13px'
+                          }}
+                          onClick={() => setActiveSection(section.id)}
+                        >
+                          <span style={styles.navIcon}>{section.icon}</span>
+                          <span>{section.label}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-                {activeView === 'world' && worldSubmenuOpen && (
-                  <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
-                    {sections.map((section) => (
+
+                {/* PHASE 3: Story Arcs Section */}
+                <div style={{ marginBottom: '12px' }}>
+                  <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
+                    Phase 3: Story Arcs
+                  </h4>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                    <NavButton
+                      label="Story Arcs"
+                      icon="📚"
+                      active={activeView === 'arc-chat' || activeView === 'arc-manager'}
+                      onClick={handleArcNavClick}
+                    />
+                    <button
+                      style={styles.navToggle}
+                      onClick={toggleArcSubmenu}
+                      aria-expanded={arcSubmenuOpen}
+                      aria-label="Toggle Story Arcs submenu"
+                    >
+                      {arcSubmenuOpen ? '▾' : '▸'}
+                    </button>
+                  </div>
+                  
+                  {(activeView === 'arc-chat' || activeView === 'arc-manager') && arcSubmenuOpen && (
+                    <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
                       <button
-                        key={section.id}
                         style={{
                           ...styles.navButton,
-                          ...(activeSection === section.id ? styles.navButtonActive : {}),
+                          ...(activeView === 'arc-chat' ? styles.navButtonActive : {}),
                           paddingLeft: '28px',
                           fontSize: '13px'
                         }}
-                        onClick={() => setActiveSection(section.id)}
+                        onClick={() => setActiveView('arc-chat')}
                       >
-                        <span style={styles.navIcon}>{section.icon}</span>
-                        <span>{section.label}</span>
+                        <span style={styles.navIcon}>💬</span>
+                        <span>Build Arc Chat</span>
                       </button>
-                    ))}
-                  </div>
-                )}
-                <NavButton
-                  label="Story Arcs"
-                  icon="📚"
-                  active={activeView === 'arcs'}
-                  onClick={() => setActiveView('arcs')}
-                />
-                <NavButton
-                  label="Episodes"
-                  icon="📝"
-                  active={activeView === 'episodes'}
-                  onClick={() => setActiveView('episodes')}
-                />
-                <NavButton
-                  label="Export"
-                  icon="📤"
-                  active={activeView === 'export'}
-                  onClick={() => setActiveView('export')}
-                />
+                      <button
+                        style={{
+                          ...styles.navButton,
+                          ...(activeView === 'arc-manager' ? styles.navButtonActive : {}),
+                          paddingLeft: '28px',
+                          fontSize: '13px'
+                        }}
+                        onClick={() => setActiveView('arc-manager')}
+                      >
+                        <span style={styles.navIcon}>📋</span>
+                        <span>Arc Manager</span>
+                      </button>
+                    </div>
+                  )}
+                </div>
+
+                {/* PHASE 4+: Coming Soon */}
+                <div style={{ marginBottom: '12px' }}>
+                  <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
+                    Phase 4+: Coming Soon
+                  </h4>
+                  
+                  <NavButton
+                    label="Episodes"
+                    icon="📝"
+                    active={activeView === 'episodes'}
+                    onClick={() => setActiveView('episodes')}
+                  />
+                  <NavButton
+                    label="Export"
+                    icon="📤"
+                    active={activeView === 'export'}
+                    onClick={() => setActiveView('export')}
+                  />
+                </div>
               </nav>
 
               {projectData && (
@@ -187,18 +278,14 @@ function MainApp() {
             </aside>
 
             {/* Center Panel - Main Editor */}
-            {/* PHASE 2: Updated conditional to show world-chat view */}
-            {(activeView === 'world-chat' || activeView !== 'world' || worldSubmenuOpen) ? (
-              <main style={styles.centerPanel}>
-                {activeView === 'world-chat' && <WorldBuilderChat selectedModel={selectedModel} />}
-                {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
-                {activeView === 'arcs' && <PlaceholderView title="Story Arcs" />}
-                {activeView === 'episodes' && <PlaceholderView title="Episodes" />}
-                {activeView === 'export' && <PlaceholderView title="Export" />}
-              </main>
-            ) : null}
-
-            {/* Right sidebar removed — contextual widgets were replaced with an inline contextual area or can be added later if needed */}
+            <main style={styles.centerPanel}>
+              {activeView === 'world-chat' && <WorldBuilderChat selectedModel={selectedModel} />}
+              {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
+              {activeView === 'arc-chat' && <ArcBuilderChat selectedModel={selectedModel} />}
+              {activeView === 'arc-manager' && <ArcManager projectId={currentProject} />}
+              {activeView === 'episodes' && <PlaceholderView title="Episodes" phase="Phase 4" />}
+              {activeView === 'export' && <PlaceholderView title="Export" phase="Phase 5" />}
+            </main>
           </>
         )}
       </div>
@@ -261,11 +348,17 @@ function WelcomeScreen() {
           <div style={styles.welcomeStep}>
             <span style={styles.welcomeStepNumber}>3</span>
             <p style={styles.welcomeStepText}>
-              Develop episodes with consistent characters, locations, and timelines
+              Plan story arcs spanning multiple episodes with plot beats
             </p>
           </div>
           <div style={styles.welcomeStep}>
             <span style={styles.welcomeStepNumber}>4</span>
+            <p style={styles.welcomeStepText}>
+              Develop episodes with consistent characters, locations, and timelines
+            </p>
+          </div>
+          <div style={styles.welcomeStep}>
+            <span style={styles.welcomeStepNumber}>5</span>
             <p style={styles.welcomeStepText}>
               Export production-ready TTS scripts for audio production
             </p>
@@ -276,217 +369,15 @@ function WelcomeScreen() {
   );
 }
 
-function PlaceholderView({ title }) {
+function PlaceholderView({ title, phase }) {
   return (
     <div style={styles.placeholder}>
       <h2 style={styles.placeholderTitle}>{title}</h2>
       <p style={styles.placeholderText}>
-        This feature is coming in the next phase of development.
+        This feature is coming in {phase} of development.
       </p>
     </div>
   );
 }
-
-const styles = {
-  app: {
-    display: 'flex',
-    flexDirection: 'column',
-    height: '100vh',
-    backgroundColor: '#0a0a0a',
-    color: '#fff',
-    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-  },
-  header: {
-    height: '60px',
-    backgroundColor: '#1a1a1a',
-    borderBottom: '1px solid #333',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    padding: '0 20px',
-    gap: '20px',
-  },
-  headerLeft: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '20px',
-    flex: 1,
-  },
-  logo: {
-    margin: 0,
-    fontSize: '20px',
-    fontWeight: '600',
-    whiteSpace: 'nowrap',
-  },
-  projectSelector: {
-    minWidth: '300px',
-  },
-  headerRight: {
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-  },
-  saveIndicator: {
-    fontSize: '13px',
-    fontWeight: '500',
-  },
-  mainContent: {
-    flex: 1,
-    display: 'flex',
-    overflow: 'hidden',
-  },
-  sidebar: {
-    width: '250px',
-    backgroundColor: '#1a1a1a',
-    borderRight: '1px solid #333',
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
-  },
-  nav: {
-    padding: '20px',
-    borderBottom: '1px solid #333',
-  },
-  navTitle: {
-    margin: '0 0 12px 0',
-    fontSize: '13px',
-    color: '#888',
-    textTransform: 'uppercase',
-    letterSpacing: '0.5px',
-  },
-  navButton: {
-    width: '100%',
-    padding: '12px 16px',
-    backgroundColor: 'transparent',
-    color: '#aaa',
-    border: 'none',
-    borderRadius: '6px',
-    textAlign: 'left',
-    cursor: 'pointer',
-    marginBottom: '4px',
-    fontSize: '14px',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '10px',
-    transition: 'all 0.2s',
-  },
-  navButtonActive: {
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-  },
-  navIcon: {
-    fontSize: '18px',
-  },
-  navToggle: {
-    background: 'transparent',
-    border: 'none',
-    color: '#aaa',
-    cursor: 'pointer',
-    padding: '6px',
-    borderRadius: '4px',
-  },
-  projectInfo: {
-    padding: '20px',
-    flex: 1,
-    overflow: 'auto',
-  },
-  projectInfoTitle: {
-    margin: '0 0 8px 0',
-    fontSize: '16px',
-    color: '#fff',
-  },
-  projectGenre: {
-    display: 'inline-block',
-    padding: '4px 8px',
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    borderRadius: '4px',
-    fontSize: '11px',
-    textTransform: 'uppercase',
-    fontWeight: '600',
-    marginBottom: '12px',
-  },
-  projectDescription: {
-    margin: 0,
-    fontSize: '13px',
-    color: '#aaa',
-    lineHeight: '1.5',
-  },
-  centerPanel: {
-    flex: 1,
-    overflow: 'hidden',
-  },
-  // sidebarCollapseButton removed
-  welcome: {
-    flex: 1,
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-  },
-  welcomeContent: {
-    maxWidth: '600px',
-    textAlign: 'center',
-  },
-  welcomeTitle: {
-    fontSize: '32px',
-    marginBottom: '16px',
-    color: '#fff',
-  },
-  welcomeText: {
-    fontSize: '16px',
-    color: '#aaa',
-    marginBottom: '40px',
-    lineHeight: '1.6',
-  },
-  welcomeSteps: {
-    display: 'flex',
-    flexDirection: 'column',
-    gap: '20px',
-    textAlign: 'left',
-  },
-  welcomeStep: {
-    display: 'flex',
-    gap: '16px',
-    alignItems: 'flex-start',
-  },
-  welcomeStepNumber: {
-    width: '32px',
-    height: '32px',
-    backgroundColor: '#3b82f6',
-    color: '#fff',
-    borderRadius: '50%',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    fontSize: '16px',
-    fontWeight: '600',
-    flexShrink: 0,
-  },
-  welcomeStepText: {
-    margin: 0,
-    color: '#ccc',
-    fontSize: '14px',
-    lineHeight: '1.6',
-    paddingTop: '4px',
-  },
-  placeholder: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: '40px',
-  },
-  placeholderTitle: {
-    fontSize: '24px',
-    color: '#fff',
-    marginBottom: '12px',
-  },
-  placeholderText: {
-    fontSize: '14px',
-    color: '#666',
-  },
-};
 
 export default App;

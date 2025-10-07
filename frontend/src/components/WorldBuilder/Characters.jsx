@@ -10,9 +10,9 @@ const Characters = ({ data, addItem, updateItem, removeItem, onViewModeChange })
       onAdd={() => addItem('characters')}
       onRemove={(index) => removeItem('characters', index)}
       onUpdate={(index, field, value) => updateItem('characters', index, field, value)}
-  previewFields={['name','role','currentLocation']}
-  openDetailOnAdd={true}
-  onViewModeChange={onViewModeChange}
+      previewFields={['name','role','currentLocation']}
+      openDetailOnAdd={true}
+      onViewModeChange={onViewModeChange}
       title={'Characters'}
       addLabel={'+ Add Character'}
       emptyMessage={'No characters yet. Click "+ Add Character" to create one.'}
@@ -34,6 +34,7 @@ const Characters = ({ data, addItem, updateItem, removeItem, onViewModeChange })
           <div style={styles.formGroup}><label style={styles.label}>Skills</label><textarea style={styles.textarea} value={JSON.stringify(char.skills || [])} onChange={(e) => { try { updateField('skills', JSON.parse(e.target.value)); } catch { } }} rows="3" /></div>
           <div style={styles.formGroup}><label style={styles.label}>Weaknesses</label><input style={styles.input} value={(char.weaknesses || []).join(', ')} onChange={(e) => updateField('weaknesses', e.target.value.split(',').map(s => s.trim()))} placeholder="Comma-separated" /></div>
           <div style={styles.formGroup}><label style={styles.label}>Equipment</label><input style={styles.input} value={(char.equipment || []).join(', ')} onChange={(e) => updateField('equipment', e.target.value.split(',').map(s => s.trim()))} placeholder="Comma-separated" /></div>
+          <div style={styles.formGroup}><label style={styles.label}>Relationships (JSON)</label><textarea style={styles.textarea} value={JSON.stringify(char.relationships || [])} onChange={(e) => { try { updateField('relationships', JSON.parse(e.target.value)); } catch {} }} rows="3" /></div>
           <div style={styles.formGroup}><label style={styles.label}>Current Location</label><input style={styles.input} value={char.currentLocation || ''} onChange={(e) => updateField('currentLocation', e.target.value)} /></div>
         </div>
       )}

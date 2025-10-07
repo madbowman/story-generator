@@ -1,0 +1,43 @@
+{
+  "arcs": [
+    {
+      "id": "string - unique_arc_id_lowercase",
+      "title": "string - Arc title",
+      "season": "number - Season number",
+      "arcNumber": "number - Arc number within season",
+      "episodes": {
+        "start": "number - First episode number",
+        "end": "number - Last episode number",
+        "list": ["array of episode numbers"]
+      },
+      "status": "string - planned/in_progress/complete",
+      "description": "string - Arc description",
+      "themes": ["array of theme strings"],
+      "mainCharacters": ["array of character_ids"],
+      "supportingCharacters": ["array of character_ids"],
+      "primaryLocations": ["array of location_ids"],
+      "factions": ["array of faction_ids"],
+      "plotBeats": [
+        {
+          "episode": "number - Episode number",
+          "title": "string - Beat title",
+          "description": "string - What happens",
+          "characters": ["array of character_ids"],
+          "location": "string - location_id",
+          "outcome": "string - Result of this beat"
+        }
+      ],
+      "resolution": "string - How the arc concludes",
+      "cliffhanger": "string - Setup for next arc (optional)",
+      "connections": {
+        "previousArc": "string - previous_arc_id or null",
+        "nextArc": "string - next_arc_id or null"
+      }
+    }
+  ],
+  "metadata": {
+    "totalArcs": "number - Total number of arcs",
+    "totalSeasons": "number - Total number of seasons",
+    "lastUpdated": "string - ISO timestamp"
+  }
+}
