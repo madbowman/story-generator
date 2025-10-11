@@ -49,36 +49,6 @@ def ai_models():
     result = ollama.list_models()
     return jsonify(result)
 
-@app.route('/api/ai/generate', methods=['POST'])
-def ai_generate():
-    """
-    Generate AI response
-    Body: {
-        "prompt": str,
-        "model": str (optional),
-        "temperature": float (optional),
-        "system_prompt": str (optional)
-    }
-    """
-    data = request.json
-    
-    prompt = data.get('prompt')
-    if not prompt:
-        return jsonify({"success": False, "error": "Prompt is required"}), 400
-    
-    model = data.get('model')
-    temperature = data.get('temperature', 0.8)
-    system_prompt = data.get('system_prompt')
-    
-    result = ollama.generate(
-        prompt=prompt,
-        model=model,
-        temperature=temperature,
-        system_prompt=system_prompt
-    )
-    
-    return jsonify(result)
-
 @app.route('/api/ai/chat', methods=['POST'])
 def ai_chat():
     """

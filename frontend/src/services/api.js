@@ -35,22 +35,11 @@ export const aiService = {
   },
 
   /**
-   * Generate AI response
-   */
-  generate: async (prompt, options = {}) => {
-    const response = await api.post('/ai/generate', {
-      prompt,
-      model: options.model,
-      temperature: options.temperature || 0.8,
-      system_prompt: options.systemPrompt,
-    });
-    return response.data;
-  },
-
-  /**
    * Chat with AI using conversation history
    */
   chat: async (messages, options = {}) => {
+    console.log('Chat messages:', messages);
+
     const response = await api.post('/ai/chat', {
       messages,
       model: options.model,
@@ -105,13 +94,5 @@ export const projectService = {
   },
 };
 
-// ============================================================================
-// HEALTH CHECK
-// ============================================================================
-
-export const healthCheck = async () => {
-  const response = await api.get('/health');
-  return response.data;
-};
 
 export default api;
