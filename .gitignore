@@ -12,7 +12,7 @@ backend/**/__pycache__/
 dist/
 build/
 
-frontend/package-lock.jsons
+frontend/package-lock.json
 
 # Node
 frontend/node_modules/
