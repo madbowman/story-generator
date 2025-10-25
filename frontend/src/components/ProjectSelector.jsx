@@ -9,7 +9,7 @@ const ProjectSelector = () => {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // New project form
   const [newProject, setNewProject] = useState({
     title: '',
@@ -50,7 +50,7 @@ const ProjectSelector = () => {
 
   const handleCreateProject = async (e) => {
     e.preventDefault();
-    
+
     if (!newProject.title.trim()) {
       alert('Project title is required');
       return;
@@ -58,15 +58,15 @@ const ProjectSelector = () => {
 
     try {
       const result = await api.post('/projects', newProject).then(res => res.data);
-      
+
       if (result.success) {
         await loadProjects();
-        
+
         // Load the newly created project
         if (result.project_id) {
           await loadProject(result.project_id);
         }
-        
+
         setShowCreateModal(false);
         setNewProject({ title: '', description: '', genre: 'General' });
       } else {
@@ -84,19 +84,28 @@ const ProjectSelector = () => {
 
   const handleDeleteProject = async (projectId, projectTitle, e) => {
     e.stopPropagation();
-    
+
     if (!window.confirm(`Delete "${projectTitle}"? This cannot be undone.`)) {
       return;
     }
 
     try {
       await api.delete(`/projects/${projectId}`);
-      
+
+      // Clean up localStorage for WorldBuilder chat messages
+      try {
+        localStorage.removeItem(`worldchat_${projectId}`);
+        localStorage.removeItem(`worldchat_ai_${projectId}`);
+        console.log(`Cleaned up WorldBuilder chat data for project: ${projectId}`);
+      } catch (e) {
+        console.error('Failed to clean up WorldBuilder chat localStorage:', e);
+      }
+
       // Note: currentProject is a string (project ID), not an object
       if (currentProject === projectId) {
         // Project was deleted, will show welcome screen
       }
-      
+
       await loadProjects();
     } catch (err) {
       alert('Error deleting project: ' + err.message);
@@ -130,7 +139,7 @@ const ProjectSelector = () => {
           <span style={styles.arrow}>▼</span>
         </div>
 
-        <button 
+        <button
           style={styles.createButton}
           onClick={(e) => {
             e.stopPropagation();
@@ -189,14 +198,14 @@ const ProjectSelector = () => {
           <div style={styles.modal} onClick={(e) => e.stopPropagation()}>
             <div style={styles.modalHeader}>
               <h2 style={styles.modalTitle}>Create New Project</h2>
-              <button 
+              <button
                 style={styles.modalClose}
                 onClick={() => setShowCreateModal(false)}
               >
                 ✕
               </button>
             </div>
-            
+
             <form onSubmit={handleCreateProject} style={styles.form}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Project Title *</label>
@@ -204,7 +213,7 @@ const ProjectSelector = () => {
                   type="text"
                   style={styles.input}
                   value={newProject.title}
-                  onChange={(e) => setNewProject({...newProject, title: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
                   placeholder="Enter project title"
                   required
                   autoFocus
@@ -216,7 +225,7 @@ const ProjectSelector = () => {
                 <select
                   style={styles.select}
                   value={newProject.genre}
-                  onChange={(e) => setNewProject({...newProject, genre: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, genre: e.target.value })}
                 >
                   {genres.map(genre => (
                     <option key={genre} value={genre}>{genre}</option>
@@ -229,21 +238,21 @@ const ProjectSelector = () => {
                 <textarea
                   style={styles.textarea}
                   value={newProject.description}
-                  onChange={(e) => setNewProject({...newProject, description: e.target.value})}
+                  onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
                   placeholder="Brief description of your story (optional)"
                   rows="3"
                 />
               </div>
 
               <div style={styles.modalFooter}>
-                <button 
+                <button
                   type="button"
                   style={styles.buttonSecondary}
                   onClick={() => setShowCreateModal(false)}
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   style={styles.buttonPrimary}
                 >

@@ -32,7 +32,7 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
     { id: 'factions', label: 'Factions', icon: '⚔️' },
     { id: 'religions', label: 'Religions', icon: '✨' },
     { id: 'glossary', label: 'Glossary', icon: '📖' },
-  { id: 'content', label: 'Items', icon: '🎒' },
+    { id: 'content', label: 'Items', icon: '🎒' },
   ];
 
   useEffect(() => {
@@ -48,7 +48,25 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
     try {
       const response = await api.get(`/projects/${currentProject}/world/${section}`);
       if (response.data.success) {
-        setWorldData(response.data.data);
+        let sectionData = response.data.data;
+
+        // If we're loading characters, also load locations for the dropdown
+        if (section === 'characters') {
+          try {
+            const locationsResponse = await api.get(`/projects/${currentProject}/world/locations`);
+            if (locationsResponse.data.success) {
+              sectionData = {
+                ...sectionData,
+                places: locationsResponse.data.data.places || []
+              };
+            }
+          } catch (locationError) {
+            console.warn('Failed to load locations for character dropdown:', locationError);
+            // Continue without locations data
+          }
+        }
+
+        setWorldData(sectionData);
       }
     } catch (error) {
       console.error('Failed to load section:', error);
@@ -79,12 +97,12 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
 
   const addItem = (arrayField) => {
     // Create new item based on array field type
-    const newItem = arrayField === 'places' 
+    const newItem = arrayField === 'places'
       ? { id: Date.now().toString(), name: '', type: '', description: '' }
       : arrayField === 'characters'
-      ? { id: Date.now().toString(), name: '', role: '', description: '', personality: '', backstory: '', skills: [], weaknesses: [], relationships: [] }
-      : { id: Date.now().toString(), name: '', description: '' };
-    
+        ? { id: Date.now().toString(), name: '', role: '', description: '', personality: '', backstory: '', skills: [], weaknesses: [], relationships: [] }
+        : { id: Date.now().toString(), name: '', description: '' };
+
     setWorldData({
       ...worldData,
       [arrayField]: [...(worldData[arrayField] || []), newItem]
@@ -189,7 +207,7 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
         )}
 
         {/* Save Button: show only on detail view or world_overview */}
-        { (activeSection === 'world_overview' || sectionViewMode === 'detail') && (
+        {(activeSection === 'world_overview' || sectionViewMode === 'detail') && (
           <div style={styles.saveBar}>
             <button style={styles.saveButton} onClick={saveSection} disabled={saving}>
               {saving ? 'Saving...' : 'Save Changes'}

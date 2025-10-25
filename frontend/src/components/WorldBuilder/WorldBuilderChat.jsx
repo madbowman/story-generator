@@ -9,6 +9,63 @@ import { aiService } from '../../services/api';
 
 import chatStyles from '../../styles/aichat/styles';
 
+// Configuration for conversation management
+// This prevents token overflow by limiting conversation history sent to AI
+const CONVERSATION_CONFIG = {
+  MAX_MESSAGES: 10, // Sliding window size for AI context (reduced for testing)
+  ENABLE_SLIDING_WINDOW: true, // Enable/disable sliding window feature
+
+  // Dual-State Architecture:
+  // - `messages`: Full conversation history for UI display (never truncated)
+  // - `aiMessages`: AI-optimized state with rolling summaries for context efficiency
+  // 
+  // How rolling summaries work:
+  // - When aiMessages > MAX_MESSAGES, summarize first MAX_MESSAGES into one summary
+  // - Replace those messages with the summary + keep remaining recent messages
+  // - Creates: [Summary1, RecentMsg1, RecentMsg2...] until it grows again
+  // - Then: [Summary2(includes Summary1), NewRecentMsgs...] - rolling context!
+  // - Prevents exponential growth while maintaining rich conversational context
+};
+
+// Generate AI-powered rolling summary for conversation context compression
+async function generateConversationSummary(messagesToSummarize, selectedModel) {
+  try {
+    // Prepare the conversation for AI summarization
+    const conversationForSummary = messagesToSummarize.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    // Add summarization prompt
+    conversationForSummary.push({
+      role: 'user',
+      content: `Briefly summarize what the user has told you about their story so far. Include any names, details, or facts they mentioned - no matter how small. Ignore system messages and examples.`
+    });
+
+    // Call AI service to generate summary
+    const result = await aiService.chat(conversationForSummary, {
+      model: selectedModel,
+      temperature: 0.1, // Very low temperature for consistent, factual summaries
+    });
+
+    console.log('AI Summary Result:', result); // Debug log
+
+    if (result.success && result.response) {
+      const aiSummary = result.response.trim();
+      console.log('AI Generated Summary:', aiSummary); // Debug log
+      return `[Previous conversation summary (${messagesToSummarize.length} messages): ${aiSummary}. Current conversation continues below...]`;
+    } else {
+      console.log('AI summary failed, using fallback. Result:', result); // Debug log
+      // Fallback to simple summary if AI fails
+      return `[Previous conversation summary (${messagesToSummarize.length} messages): World building discussion covering characters, locations, and world details. Current conversation continues below...]`;
+    }
+  } catch (error) {
+    console.error('Failed to generate AI summary:', error);
+    // Fallback to simple summary if AI fails
+    return `[Previous conversation summary (${messagesToSummarize.length} messages): World building discussion covering characters, locations, and world details. Current conversation continues below...]`;
+  }
+}
+
 export default function WorldBuilderChat({ selectedModel }) {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
@@ -25,15 +82,36 @@ export default function WorldBuilderChat({ selectedModel }) {
     }
     return [];
   });
+
+  // Separate AI-optimized message state for sliding window with rolling summaries
+  const [aiMessages, setAiMessages] = useState(() => {
+    // Load saved AI conversation state for this project from localStorage
+    if (currentProject) {
+      try {
+        const saved = localStorage.getItem(`worldchat_ai_${currentProject}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          console.log('🔄 Loaded aiMessages from localStorage:', parsed.length, 'messages');
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to load saved AI conversation:', e);
+      }
+    }
+    console.log('🔄 No saved aiMessages found, starting fresh');
+    return [];
+  });
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isGeneratingConversationSummary, setIsGeneratingConversationSummary] = useState(false);
   const [schemas, setSchemas] = useState(null);
   // selectedModel is provided via props from App -> AIStatus
   const [temperature, setTemperature] = useState(0.8);
   const [hasSummary, setHasSummary] = useState(false);
   const messagesEndRef = useRef(null);
+  const inputRef = useRef(null);
 
   // Load world schemas on mount
   useEffect(() => {
@@ -53,15 +131,16 @@ export default function WorldBuilderChat({ selectedModel }) {
 
   // Initial AI greeting
   useEffect(() => {
-    if (messages.length === 0 && currentProject) {
+    if (messages.length === 0 && aiMessages.length === 0 && currentProject) {
       const greeting = {
         role: 'assistant',
-        content: `Welcome! I'm ready to help you build the world for "${currentProject.title}".\n\n**Phase 2.1 Workflow:**\n\n1. **Discuss Naturally**: Tell me about your world - characters, locations, factions, religions, etc.\n2. **Generate Summary**: When ready, click "📝 Generate World Summary" and I'll create a structured summary\n3. **Build World**: Click "🌍 Build World from Summary" to extract the data into JSON files\n\n**Example Conversation:**\n"I'm creating a steampunk world with gnomes and goblins"\n"The gnomes live in Buzzlebury, an underground city"\n"King Gnomus rules the gnomes wisely"\n\nLet's start! Tell me about your world.`,
+        content: `Welcome! I'm ready to help you build the world for "${currentProject}".\n\nI'm here to have a natural conversation about your story world. Just tell me about your characters, locations, plots, or any creative ideas you have in mind.\n\n**Example:**\n"I'm creating a steampunk world with gnomes and goblins"\n"The gnomes live in Buzzlebury, an underground city"\n"King Gnomus rules the gnomes wisely"\n\nLet's start! Tell me about your world - I'll respond conversationally and help you develop your ideas.`,
         timestamp: new Date().toISOString(),
       };
       setMessages([greeting]);
+      setAiMessages([greeting]);
     }
-  }, [currentProject, messages.length]);
+  }, [currentProject, messages.length, aiMessages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -69,11 +148,12 @@ export default function WorldBuilderChat({ selectedModel }) {
 
   useEffect(() => {
     scrollToBottom();
-    
+
     // Save conversation to localStorage
     if (currentProject && messages.length > 0) {
       try {
         localStorage.setItem(`worldchat_${currentProject}`, JSON.stringify(messages));
+        localStorage.setItem(`worldchat_ai_${currentProject}`, JSON.stringify(aiMessages));
       } catch (e) {
         console.error('Failed to save conversation:', e);
       }
@@ -81,17 +161,17 @@ export default function WorldBuilderChat({ selectedModel }) {
 
     // Check if last message is a summary
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.role === 'assistant' && 
-        (lastMsg.content.includes('=== WORLD SUMMARY ===') || 
-         lastMsg.content.includes('=== CHARACTERS ===') ||
-         lastMsg.content.includes('=== LOCATIONS ==='))) {
+    if (lastMsg && lastMsg.role === 'assistant' &&
+      (lastMsg.content.includes('=== WORLD SUMMARY ===') ||
+        lastMsg.content.includes('=== CHARACTERS ===') ||
+        lastMsg.content.includes('=== LOCATIONS ==='))) {
       setHasSummary(true);
     }
   }, [messages, currentProject]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!input.trim() || isGenerating) return;
 
     const userMessage = {
@@ -105,12 +185,58 @@ export default function WorldBuilderChat({ selectedModel }) {
     setIsGenerating(true);
 
     try {
-      const chatMessages = messages
-        .concat(userMessage)
-        .map(msg => ({
-          role: msg.role,
-          content: msg.content
-        }));
+      // Update AI messages state with rolling summary approach
+      const MAX_MESSAGES = CONVERSATION_CONFIG.MAX_MESSAGES;
+      let newAiMessages = [...aiMessages, userMessage];
+
+      // DEBUG: Log message counts
+      console.log('=== CONVERSATION SUMMARY DEBUG ===');
+      console.log('messages.length:', messages.length);
+      console.log('aiMessages.length:', aiMessages.length);
+      console.log('newAiMessages.length:', newAiMessages.length);
+      console.log('MAX_MESSAGES:', MAX_MESSAGES);
+      console.log('ENABLE_SLIDING_WINDOW:', CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW);
+      console.log('Should trigger summary?', CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && newAiMessages.length > MAX_MESSAGES);
+
+      // If aiMessages exceeds limit, create rolling summary
+      if (CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && newAiMessages.length > MAX_MESSAGES) {
+        console.log('🔄 TRIGGERING CONVERSATION SUMMARY');
+        setIsGeneratingConversationSummary(true);
+
+        // Summarize first MAX_MESSAGES of current aiMessages
+        const messagesToSummarize = newAiMessages.slice(0, MAX_MESSAGES);
+        console.log('📝 Messages to summarize:', messagesToSummarize.length);
+        console.log('📝 Messages to summarize preview:', messagesToSummarize.slice(0, 3).map(m => `${m.role}: ${m.content.substring(0, 50)}...`));
+
+        const conversationSummary = await generateConversationSummary(messagesToSummarize, selectedModel);
+        console.log('✅ Generated summary:', conversationSummary.substring(0, 100) + '...');
+
+        // Reset aiMessages with summary + remaining messages
+        const remainingMessages = newAiMessages.slice(MAX_MESSAGES);
+        console.log('📋 Remaining messages after summary:', remainingMessages.length);
+
+        newAiMessages = [
+          { role: 'system', content: conversationSummary },
+          ...remainingMessages
+        ];
+
+        console.log('🔄 Final aiMessages length after summary:', newAiMessages.length);
+        setAiMessages(newAiMessages);
+        setIsGeneratingConversationSummary(false);
+      } else {
+        // No summarization needed yet
+        console.log('⏸️ No summarization needed yet');
+        setAiMessages(newAiMessages);
+      }
+
+      // Prepare messages for AI (use optimized aiMessages)
+      const chatMessages = newAiMessages.map(msg => ({
+        role: msg.role,
+        content: msg.content
+      }));
+
+      console.log('Full chat message:', chatMessages); // Debug log
+      console.log('AI chat message:', newAiMessages); // Debug log
 
       const result = await aiService.chat(chatMessages, {
         model: selectedModel,
@@ -123,7 +249,15 @@ export default function WorldBuilderChat({ selectedModel }) {
           content: result.response,
           timestamp: new Date().toISOString(),
         };
+
+        // Update both message states
         setMessages(prev => [...prev, aiMessage]);
+        setAiMessages(prev => [...prev, aiMessage]);
+
+        // Focus back to input after AI responds
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 100);
       } else {
         throw new Error(result.error);
       }
@@ -134,8 +268,14 @@ export default function WorldBuilderChat({ selectedModel }) {
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
+
+      // Focus back to input even on error
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     } finally {
       setIsGenerating(false);
+      setIsGeneratingConversationSummary(false);
     }
   };
 
@@ -205,10 +345,11 @@ relationships: mentor_bob:mentor:strong:Trained me since childhood | sister_jane
 currentLocation: castle_town
 
 CRITICAL REQUIREMENTS:
-- Every character MUST have a relationships line (use "relationships: none" if no relationships)
+- Every character MUST have a relationships line (use "relationships: none" if unsure)
 - Every character MUST have a currentLocation using a valid location_id from LOCATIONS section
 - Age and level must be numbers only
 - Use pipe | to separate multiple relationships
+- Keep relationships simple - use basic types like: friend, enemy, ally, colleague
 
 === LOCATIONS ===
 [For each location:]
@@ -310,7 +451,7 @@ CRITICAL INSTRUCTIONS:
 6. Use the pipe | symbol to separate multiple relationships
 7. Be thorough and include all details we talked about`;
 
-      const chatMessages = messages.map(msg => ({
+      const chatMessages = aiMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       }));
@@ -322,7 +463,7 @@ CRITICAL INSTRUCTIONS:
 
       const result = await aiService.chat(chatMessages, {
         model: selectedModel,
-        temperature: 0.3, // Lower temperature for structured output
+        temperature: 0.1, // Very low temperature for consistent, structured output (same as conversation summaries)
       });
 
       if (result.success) {
@@ -358,7 +499,7 @@ CRITICAL INSTRUCTIONS:
     }
 
     // Find the last summary message
-    const summaryMsg = [...messages].reverse().find(m => 
+    const summaryMsg = [...messages].reverse().find(m =>
       m.role === 'assistant' && (
         m.content.includes('=== WORLD SUMMARY ===') ||
         m.content.includes('=== CHARACTERS ===') ||
@@ -400,6 +541,7 @@ CRITICAL INSTRUCTIONS:
           role: 'system',
           content: `✅ **World Built Successfully!**\n\nCreated ${result.files_created.length} files:\n${result.files_created.map(f => `• ${f}`).join('\n')}\n\n**Entity Counts:**\n${Object.entries(result.entity_counts || {}).map(([k, v]) => `• ${k}: ${v}`).join('\n')}\n\nYou can now review and edit in the World Builder sections.`,
           timestamp: new Date().toISOString(),
+          isBuildSuccess: true
         };
         setMessages(prev => [...prev, successMessage]);
 
@@ -426,10 +568,12 @@ CRITICAL INSTRUCTIONS:
   const clearChat = () => {
     if (window.confirm('Clear all messages? This cannot be undone.')) {
       setMessages([]);
+      setAiMessages([]);
       setHasSummary(false);
       if (currentProject) {
         try {
           localStorage.removeItem(`worldchat_${currentProject}`);
+          localStorage.removeItem(`worldchat_ai_${currentProject}`);
         } catch (e) {
           console.error('Failed to clear saved conversation:', e);
         }
@@ -437,7 +581,57 @@ CRITICAL INSTRUCTIONS:
     }
   };
 
-  if (!currentProject) {
+  const deleteMessage = (messageIndex) => {
+    const messageToDelete = messages[messageIndex];
+    const isSummary = messageToDelete.isSummary || (
+      messageToDelete.role === 'assistant' && (
+        messageToDelete.content.includes('=== WORLD SUMMARY ===') ||
+        messageToDelete.content.includes('=== CHARACTERS ===') ||
+        messageToDelete.content.includes('=== LOCATIONS ===')
+      )
+    );
+    const isBuildSuccess = messageToDelete.isBuildSuccess ||
+      (messageToDelete.role === 'system' && messageToDelete.content.includes('World Built Successfully'));
+
+    let confirmMessage = 'Delete this message? This cannot be undone.';
+    if (isSummary) {
+      confirmMessage = 'Delete this world summary? This cannot be undone.';
+    } else if (isBuildSuccess) {
+      confirmMessage = 'Delete this build success message? This cannot be undone.';
+    }
+
+    if (window.confirm(confirmMessage)) {
+      const newMessages = messages.filter((_, index) => index !== messageIndex);
+      setMessages(newMessages);
+
+      // Also remove from AI messages if it exists there
+      const newAiMessages = aiMessages.filter(msg =>
+        !(msg.timestamp === messageToDelete.timestamp && msg.content === messageToDelete.content)
+      );
+      setAiMessages(newAiMessages);
+
+      // Check if there are any remaining summaries
+      const hasAnySummary = newMessages.some(msg =>
+        msg.role === 'assistant' && (
+          msg.content.includes('=== WORLD SUMMARY ===') ||
+          msg.content.includes('=== CHARACTERS ===') ||
+          msg.content.includes('=== LOCATIONS ===') ||
+          msg.isSummary
+        )
+      );
+      setHasSummary(hasAnySummary);
+
+      // Update localStorage
+      if (currentProject) {
+        try {
+          localStorage.setItem(`worldchat_${currentProject}`, JSON.stringify(newMessages));
+          localStorage.setItem(`worldchat_ai_${currentProject}`, JSON.stringify(newAiMessages));
+        } catch (e) {
+          console.error('Failed to save updated conversation:', e);
+        }
+      }
+    }
+  }; if (!currentProject) {
     return (
       <div style={chatStyles.container}>
         <div style={chatStyles.emptyState}>
@@ -450,7 +644,21 @@ CRITICAL INSTRUCTIONS:
   return (
     <div style={chatStyles.container}>
       <div style={chatStyles.header}>
-        <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
+          {CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && messages.length > CONVERSATION_CONFIG.MAX_MESSAGES && (
+            <span style={{
+              fontSize: '12px',
+              color: '#888',
+              backgroundColor: '#f0f0f0',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              whiteSpace: 'nowrap'
+            }}>
+              📜 {messages.length} msgs (keeping recent {CONVERSATION_CONFIG.MAX_MESSAGES})
+            </span>
+          )}
+        </div>
         <div style={chatStyles.controls}>
           <div style={chatStyles.tempControl}>
             <label style={chatStyles.tempLabel} title="Creativity Level">
@@ -467,7 +675,7 @@ CRITICAL INSTRUCTIONS:
             />
           </div>
 
-          <button 
+          <button
             onClick={clearChat}
             style={chatStyles.clearButton}
             title="Clear Chat"
@@ -479,9 +687,14 @@ CRITICAL INSTRUCTIONS:
 
       <div style={chatStyles.messagesContainer}>
         {messages.map((msg, idx) => (
-          <Message key={idx} message={msg} />
+          <Message
+            key={idx}
+            message={msg}
+            messageIndex={idx}
+            onDelete={deleteMessage}
+          />
         ))}
-        
+
         {isGenerating && (
           <div style={chatStyles.generatingIndicator}>
             <div style={chatStyles.dots}>
@@ -492,21 +705,28 @@ CRITICAL INSTRUCTIONS:
             <span style={chatStyles.generatingText}>AI is thinking...</span>
           </div>
         )}
-        
+
         {isGeneratingSummary && (
           <div style={chatStyles.summaryIndicator}>
             <div style={chatStyles.spinner}>📝</div>
             <span style={chatStyles.summaryText}>Generating structured world summary...</span>
           </div>
         )}
-        
+
         {isBuilding && (
           <div style={chatStyles.buildingIndicator}>
             <div style={chatStyles.spinner}>⏳</div>
             <span style={chatStyles.buildingText}>Extracting world data from summary...</span>
           </div>
         )}
-        
+
+        {isGeneratingConversationSummary && (
+          <div style={chatStyles.summaryIndicator}>
+            <div style={chatStyles.spinner}>🔄</div>
+            <span style={chatStyles.summaryText}>Generating conversation summary...</span>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -522,7 +742,7 @@ CRITICAL INSTRUCTIONS:
         >
           {isGeneratingSummary ? '📝 Generating...' : '📝 Generate World Summary'}
         </button>
-        
+
         <button
           onClick={buildWorldFromSummary}
           disabled={!hasSummary || isBuilding || isGenerating || isGeneratingSummary}
@@ -538,6 +758,7 @@ CRITICAL INSTRUCTIONS:
       {/* Input Form */}
       <form onSubmit={handleSubmit} style={chatStyles.inputForm}>
         <textarea
+          ref={inputRef}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => {
@@ -551,8 +772,8 @@ CRITICAL INSTRUCTIONS:
           rows={3}
           disabled={isGenerating || isBuilding || isGeneratingSummary}
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           style={{
             ...chatStyles.sendButton,
             ...((!input.trim() || isGenerating || isBuilding || isGeneratingSummary) ? chatStyles.sendButtonDisabled : {})
@@ -566,14 +787,18 @@ CRITICAL INSTRUCTIONS:
   );
 }
 
-function Message({ message }) {
+function Message({ message, messageIndex, onDelete }) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isSummary = message.isSummary || (
-    message.role === 'assistant' && 
+    message.role === 'assistant' &&
     (message.content.includes('=== WORLD SUMMARY ===') ||
-     message.content.includes('=== CHARACTERS ==='))
+      message.content.includes('=== CHARACTERS ==='))
   );
+  const isBuildSuccess = message.isBuildSuccess ||
+    (message.role === 'system' && message.content.includes('World Built Successfully'));
+
+  const isDeletable = isSummary || isBuildSuccess;
 
   return (
     <div style={{
@@ -584,9 +809,31 @@ function Message({ message }) {
         <span style={chatStyles.messageRole}>
           {isUser ? '👤 You' : isSystem ? '⚠️ System' : isSummary ? '📝 AI Summary' : '🤖 AI'}
         </span>
-        <span style={chatStyles.messageTime}>
-          {new Date(message.timestamp).toLocaleTimeString()}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <span style={chatStyles.messageTime}>
+            {new Date(message.timestamp).toLocaleTimeString()}
+          </span>
+          {isDeletable && onDelete && (
+            <button
+              onClick={() => onDelete(messageIndex)}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#dc3545',
+                cursor: 'pointer',
+                fontSize: '14px',
+                padding: '2px 4px',
+                borderRadius: '3px',
+                transition: 'background-color 0.2s'
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = 'rgba(220, 53, 69, 0.1)'}
+              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+              title={isSummary ? "Delete this summary" : "Delete this build message"}
+            >
+              🗑️
+            </button>
+          )}
+        </div>
       </div>
       <div style={chatStyles.messageContent}>
         {message.content}

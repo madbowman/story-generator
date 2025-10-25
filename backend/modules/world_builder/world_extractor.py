@@ -245,6 +245,37 @@ class WorldExtractor:
         """Parse value based on schema type"""
         schema_hint = schema.get(key, '')
         
+        # Special handling for skills
+        if key == 'skills':
+            skills = []
+            
+            # Handle "none" case
+            if value.strip().lower() == 'none':
+                return []
+            
+            # Split by comma to get individual skills
+            skill_parts = [part.strip() for part in value.split(',') if part.strip()]
+            
+            for skill_part in skill_parts:
+                if ':' in skill_part:
+                    # Format: "skill_name:proficiency_level"
+                    skill_components = skill_part.split(':', 1)  # Split only on first colon
+                    if len(skill_components) == 2:
+                        skill_obj = {
+                            'name': skill_components[0].strip(),
+                            'proficiency': skill_components[1].strip()
+                        }
+                        skills.append(skill_obj)
+                else:
+                    # No proficiency specified, default to 'proficient'
+                    skill_obj = {
+                        'name': skill_part.strip(),
+                        'proficiency': 'proficient'
+                    }
+                    skills.append(skill_obj)
+            
+            return skills
+        
         # Special handling for relationships
         if key == 'relationships':
             relationships = []

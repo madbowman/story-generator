@@ -38,8 +38,6 @@ export const aiService = {
    * Chat with AI using conversation history
    */
   chat: async (messages, options = {}) => {
-    console.log('Chat messages:', messages);
-
     const response = await api.post('/ai/chat', {
       messages,
       model: options.model,

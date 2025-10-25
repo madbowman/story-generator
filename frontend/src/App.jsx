@@ -23,8 +23,22 @@ function App() {
 
 function MainApp() {
   const { currentProject, projectData, saveStatus } = useProject();
-  const [activeView, setActiveView] = useState('world-chat');
-  const [activeSection, setActiveSection] = useState('world_overview');
+  const [activeView, setActiveView] = useState(() => {
+    try {
+      const savedView = localStorage.getItem('activeView');
+      return savedView || 'world-chat';
+    } catch (e) {
+      return 'world-chat';
+    }
+  });
+  const [activeSection, setActiveSection] = useState(() => {
+    try {
+      const savedSection = localStorage.getItem('activeSection');
+      return savedSection || 'world_overview';
+    } catch (e) {
+      return 'world_overview';
+    }
+  });
   const [selectedModel, setSelectedModel] = useState(() => {
     try {
       const v = localStorage.getItem('selectedModel');
@@ -36,7 +50,18 @@ function MainApp() {
 
   const handleSetSelectedModel = (model) => {
     setSelectedModel(model);
-    try { localStorage.setItem('selectedModel', model); } catch (e) {}
+    try { localStorage.setItem('selectedModel', model); } catch (e) { }
+  };
+
+  // Wrapper functions to persist navigation state
+  const handleSetActiveView = (view) => {
+    setActiveView(view);
+    try { localStorage.setItem('activeView', view); } catch (e) { }
+  };
+
+  const handleSetActiveSection = (section) => {
+    setActiveSection(section);
+    try { localStorage.setItem('activeSection', section); } catch (e) { }
   };
 
   const [worldSubmenuOpen, setWorldSubmenuOpen] = useState(() => {
@@ -60,7 +85,7 @@ function MainApp() {
   const toggleWorldSubmenu = () => {
     setWorldSubmenuOpen((prev) => {
       const next = !prev;
-      try { localStorage.setItem('worldSubmenuOpen', next ? 'true' : 'false'); } catch (e) {}
+      try { localStorage.setItem('worldSubmenuOpen', next ? 'true' : 'false'); } catch (e) { }
       return next;
     });
   };
@@ -68,16 +93,16 @@ function MainApp() {
   const toggleArcSubmenu = () => {
     setArcSubmenuOpen((prev) => {
       const next = !prev;
-      try { localStorage.setItem('arcSubmenuOpen', next ? 'true' : 'false'); } catch (e) {}
+      try { localStorage.setItem('arcSubmenuOpen', next ? 'true' : 'false'); } catch (e) { }
       return next;
     });
   };
 
   const handleWorldNavClick = () => {
     if (activeView !== 'world') {
-      setActiveView('world');
+      handleSetActiveView('world');
       setWorldSubmenuOpen(true);
-      try { localStorage.setItem('worldSubmenuOpen', 'true'); } catch (e) {}
+      try { localStorage.setItem('worldSubmenuOpen', 'true'); } catch (e) { }
     } else {
       toggleWorldSubmenu();
     }
@@ -85,14 +110,14 @@ function MainApp() {
 
   const handleArcNavClick = () => {
     if (activeView !== 'arc-chat' && activeView !== 'arc-manager') {
-      setActiveView('arc-chat');
+      handleSetActiveView('arc-chat');
       setArcSubmenuOpen(true);
-      try { localStorage.setItem('arcSubmenuOpen', 'true'); } catch (e) {}
+      try { localStorage.setItem('arcSubmenuOpen', 'true'); } catch (e) { }
     } else {
       toggleArcSubmenu();
     }
   };
-  
+
   const sections = [
     { id: 'world_overview', label: 'World Overview', icon: '🌍' },
     { id: 'locations', label: 'Locations', icon: '📍' },
@@ -132,20 +157,20 @@ function MainApp() {
               <div style={{ padding: '8px 12px' }} />
               <nav style={styles.nav}>
                 <h3 style={styles.navTitle}>Navigation</h3>
-                
+
                 {/* PHASE 2.1: World Builder Section */}
                 <div style={{ marginBottom: '12px' }}>
                   <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
                     Phase 2.1: World Building
                   </h4>
-                  
+
                   <NavButton
                     label="Build World Chat"
                     icon="💬"
                     active={activeView === 'world-chat'}
-                    onClick={() => setActiveView('world-chat')}
+                    onClick={() => handleSetActiveView('world-chat')}
                   />
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <NavButton
                       label="World Builder"
@@ -162,7 +187,7 @@ function MainApp() {
                       {worldSubmenuOpen ? '▾' : '▸'}
                     </button>
                   </div>
-                  
+
                   {activeView === 'world' && worldSubmenuOpen && (
                     <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
                       {sections.map((section) => (
@@ -174,7 +199,7 @@ function MainApp() {
                             paddingLeft: '28px',
                             fontSize: '13px'
                           }}
-                          onClick={() => setActiveSection(section.id)}
+                          onClick={() => handleSetActiveSection(section.id)}
                         >
                           <span style={styles.navIcon}>{section.icon}</span>
                           <span>{section.label}</span>
@@ -189,7 +214,7 @@ function MainApp() {
                   <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
                     Phase 3: Story Arcs
                   </h4>
-                  
+
                   <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                     <NavButton
                       label="Story Arcs"
@@ -206,7 +231,7 @@ function MainApp() {
                       {arcSubmenuOpen ? '▾' : '▸'}
                     </button>
                   </div>
-                  
+
                   {(activeView === 'arc-chat' || activeView === 'arc-manager') && arcSubmenuOpen && (
                     <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
                       <button
@@ -216,7 +241,7 @@ function MainApp() {
                           paddingLeft: '28px',
                           fontSize: '13px'
                         }}
-                        onClick={() => setActiveView('arc-chat')}
+                        onClick={() => handleSetActiveView('arc-chat')}
                       >
                         <span style={styles.navIcon}>💬</span>
                         <span>Build Arc Chat</span>
@@ -228,7 +253,7 @@ function MainApp() {
                           paddingLeft: '28px',
                           fontSize: '13px'
                         }}
-                        onClick={() => setActiveView('arc-manager')}
+                        onClick={() => handleSetActiveView('arc-manager')}
                       >
                         <span style={styles.navIcon}>📋</span>
                         <span>Arc Manager</span>
@@ -242,18 +267,18 @@ function MainApp() {
                   <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
                     Phase 4+: Coming Soon
                   </h4>
-                  
+
                   <NavButton
                     label="Episodes"
                     icon="📝"
                     active={activeView === 'episodes'}
-                    onClick={() => setActiveView('episodes')}
+                    onClick={() => handleSetActiveView('episodes')}
                   />
                   <NavButton
                     label="Export"
                     icon="📤"
                     active={activeView === 'export'}
-                    onClick={() => setActiveView('export')}
+                    onClick={() => handleSetActiveView('export')}
                   />
                 </div>
               </nav>
@@ -280,7 +305,7 @@ function MainApp() {
             {/* Center Panel - Main Editor */}
             <main style={styles.centerPanel}>
               {activeView === 'world-chat' && <WorldBuilderChat selectedModel={selectedModel} />}
-              {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={setActiveSection} />}
+              {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={handleSetActiveSection} />}
               {activeView === 'arc-chat' && <ArcBuilderChat selectedModel={selectedModel} />}
               {activeView === 'arc-manager' && <ArcManager projectId={currentProject} />}
               {activeView === 'episodes' && <PlaceholderView title="Episodes" phase="Phase 4" />}

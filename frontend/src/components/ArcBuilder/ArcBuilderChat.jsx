@@ -9,6 +9,69 @@ import { aiService } from '../../services/api';
 
 import chatStyles from '../../styles/aichat/styles';
 
+// Configuration for conversation and world context management
+// Arc chat is more complex due to large world context that was sent with EVERY message
+const ARC_CONVERSATION_CONFIG = {
+  MAX_MESSAGES: 8, // Smaller window due to world context size
+  WORLD_CONTEXT_FREQUENCY: 15, // Re-inject world context every N messages
+  ENABLE_SLIDING_WINDOW: true,
+  INCLUDE_WORLD_CONTEXT_FIRST_MESSAGE: true,
+  SUMMARY_WINDOW_SIZE: 6, // How many older messages to analyze for arc summary (smaller due to complexity)
+
+  // How it works:
+  // - World context (characters, locations, etc.) only sent on first message + periodically
+  // - Previously sent world context with EVERY message (exponential growth!)
+  // - Now uses sliding window for conversation + AI-generated summaries of recent older messages
+  // - Uses AI to intelligently summarize recent portion of arc discussion content
+  // - Dramatically reduces payload size while maintaining world awareness and story context
+};
+
+// Generate AI-powered summary of older arc discussion messages
+async function generateArcConversationSummary(olderMessages, selectedModel) {
+  try {
+    // Use sliding window for summarization to avoid overwhelming the AI
+    // Take only the most recent portion of older messages for better focus
+    const recentOlderMessages = olderMessages.slice(-ARC_CONVERSATION_CONFIG.SUMMARY_WINDOW_SIZE);
+
+    console.log(`Summarizing ${recentOlderMessages.length} of ${olderMessages.length} older arc messages`); // Debug log
+
+    // Prepare the conversation for AI summarization
+    const conversationForSummary = recentOlderMessages.map(msg => ({
+      role: msg.role,
+      content: msg.content
+    }));
+
+    // Add summarization prompt specific to arc discussions with context about total messages
+    const totalOlderMessages = olderMessages.length;
+    conversationForSummary.push({
+      role: 'user',
+      content: `Summarize our story arc planning conversation above in 2-3 sentences. Note: This represents the most recent ${recentOlderMessages.length} messages from a total of ${totalOlderMessages} older messages. Include specific episode numbers, character names, and plot elements that were discussed. Be concise but specific.`
+    });
+
+    // Call AI service to generate summary
+    const result = await aiService.chat(conversationForSummary, {
+      model: selectedModel,
+      temperature: 0.1, // Very low temperature for consistent, factual summaries
+    });
+
+    console.log('AI Arc Summary Result:', result); // Debug log
+
+    if (result.success && result.response) {
+      const aiSummary = result.response.trim();
+      console.log('AI Generated Arc Summary:', aiSummary); // Debug log
+      return `[Previous arc discussion summary (${olderMessages.length} messages): ${aiSummary}. World context was provided earlier. Current conversation continues below...]`;
+    } else {
+      console.log('AI arc summary failed, using fallback. Result:', result); // Debug log
+      // Fallback to simple summary if AI fails
+      return `[Previous arc discussion summary (${olderMessages.length} messages): Story arc planning covering episodes, characters, and plot development. World context was provided earlier. Current conversation continues below...]`;
+    }
+  } catch (error) {
+    console.error('Failed to generate AI arc summary:', error);
+    // Fallback to simple summary if AI fails
+    return `[Previous arc discussion summary (${olderMessages.length} messages): Story arc planning covering episodes, characters, and plot development. World context was provided earlier. Current conversation continues below...]`;
+  }
+}
+
 export default function ArcBuilderChat({ selectedModel }) {
   const { currentProject, reloadProject } = useProject();
   const [messages, setMessages] = useState(() => {
@@ -29,6 +92,7 @@ export default function ArcBuilderChat({ selectedModel }) {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
   const [isBuilding, setIsBuilding] = useState(false);
+  const [isGeneratingConversationSummary, setIsGeneratingConversationSummary] = useState(false);
   const [schemas, setSchemas] = useState(null);
   const [worldContext, setWorldContext] = useState(null);
   // selectedModel is provided via props from App -> AIStatus
@@ -69,7 +133,7 @@ export default function ArcBuilderChat({ selectedModel }) {
     if (messages.length === 0 && currentProject && worldContext) {
       const characterList = worldContext.characters?.characters?.map(c => c.name).join(', ') || 'None';
       const locationList = worldContext.locations?.places?.map(l => l.name).join(', ') || 'None';
-      
+
       const greeting = {
         role: 'assistant',
         content: `Welcome! I'm ready to help you plan story arcs for "${currentProject.title}".\n\n**Phase 3 Workflow:**\n\n1. **Discuss Story Arcs**: Tell me about your story arcs - plot, characters, episodes\n2. **Generate Arc Summary**: Click "📝 Generate Arc Summary" for structured output\n3. **Build Arcs**: Click "📚 Build Arcs from Summary" to create arcs.json\n\n**Your World Context:**\n• Characters: ${characterList}\n• Locations: ${locationList}\n\nLet's plan your story! What arcs do you have in mind?`,
@@ -85,7 +149,7 @@ export default function ArcBuilderChat({ selectedModel }) {
 
   useEffect(() => {
     scrollToBottom();
-    
+
     // Save conversation to localStorage
     if (currentProject && messages.length > 0) {
       try {
@@ -97,16 +161,16 @@ export default function ArcBuilderChat({ selectedModel }) {
 
     // Check if last message is a summary
     const lastMsg = messages[messages.length - 1];
-    if (lastMsg && lastMsg.role === 'assistant' && 
-        (lastMsg.content.includes('=== ARC SUMMARY ===') || 
-         lastMsg.content.includes('=== ARC ==='))) {
+    if (lastMsg && lastMsg.role === 'assistant' &&
+      (lastMsg.content.includes('=== ARC SUMMARY ===') ||
+        lastMsg.content.includes('=== ARC ==='))) {
       setHasSummary(true);
     }
   }, [messages, currentProject]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!input.trim() || isGenerating) return;
 
     const userMessage = {
@@ -120,13 +184,18 @@ export default function ArcBuilderChat({ selectedModel }) {
     setIsGenerating(true);
 
     try {
-      // Build complete world context for AI - Include with EVERY message
       const chatMessages = [];
-      
-      // Add full world context as system message with EVERY user message
-      if (worldContext) {
+
+      // Only add world context on FIRST message or periodically to refresh context
+      const MAX_MESSAGES = ARC_CONVERSATION_CONFIG.MAX_MESSAGES;
+      const allMessages = messages.concat(userMessage);
+      const shouldIncludeWorldContext =
+        (ARC_CONVERSATION_CONFIG.INCLUDE_WORLD_CONTEXT_FIRST_MESSAGE && allMessages.length <= 2) ||
+        allMessages.length % ARC_CONVERSATION_CONFIG.WORLD_CONTEXT_FREQUENCY === 0;
+
+      if (worldContext && shouldIncludeWorldContext) {
         const contextParts = [];
-        
+
         // World Overview - ALL fields
         if (worldContext.world_overview) {
           const wo = worldContext.world_overview;
@@ -139,7 +208,7 @@ Magic System: ${wo.magicSystem || 'None'}
 History: ${wo.history || 'N/A'}
 Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
         }
-        
+
         // Characters - ALL fields
         if (worldContext.characters?.characters?.length > 0) {
           const charDetails = worldContext.characters.characters.map(c => {
@@ -148,7 +217,7 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
             const weaknesses = Array.isArray(c.weaknesses) ? c.weaknesses.join(', ') : 'None';
             const equipment = Array.isArray(c.equipment) ? c.equipment.join(', ') : 'None';
             const rels = c.relationships?.map(r => `${r.character_id} (${r.type}, ${r.status}): ${r.description}`).join('; ') || 'None';
-            
+
             return `${c.id}: ${c.name}
   Role: ${c.role}, Age: ${c.age}, Race: ${c.race}, Class: ${c.class}, Level: ${c.level}
   Alignment: ${c.alignment}
@@ -165,13 +234,13 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           }).join('\n\n');
           contextParts.push(`CHARACTERS:\n${charDetails}`);
         }
-        
+
         // Locations - ALL fields
         if (worldContext.locations?.places?.length > 0) {
           const locDetails = worldContext.locations.places.map(l => {
             const features = Array.isArray(l.notableFeatures) ? l.notableFeatures.join(', ') : 'None';
             const coords = l.coords ? `(${l.coords.x}, ${l.coords.y})` : 'N/A';
-            
+
             return `${l.id}: ${l.name} (${l.type})
   Region: ${l.region || 'N/A'}
   Population: ${l.population || 0}
@@ -185,14 +254,14 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           }).join('\n\n');
           contextParts.push(`LOCATIONS:\n${locDetails}`);
         }
-        
+
         // Factions - ALL fields
         if (worldContext.factions?.factions?.length > 0) {
           const factDetails = worldContext.factions.factions.map(f => {
             const goals = Array.isArray(f.goals) ? f.goals.join(', ') : 'None';
             const members = Array.isArray(f.members) ? f.members.join(', ') : 'None';
             const rels = f.relationships?.map(r => `${r.faction_id} (${r.status}): ${r.description}`).join('; ') || 'None';
-            
+
             return `${f.id}: ${f.name} (${f.type})
   Alignment: ${f.alignment}
   Headquarters: ${f.headquarters}
@@ -208,7 +277,7 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           }).join('\n\n');
           contextParts.push(`FACTIONS:\n${factDetails}`);
         }
-        
+
         // Religions - ALL fields
         if (worldContext.religions?.religions?.length > 0) {
           const relDetails = worldContext.religions.religions.map(r => {
@@ -217,7 +286,7 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
             const temples = Array.isArray(r.temples) ? r.temples.join(', ') : 'None';
             const holyDays = Array.isArray(r.holyDays) ? r.holyDays.join(', ') : 'None';
             const rels = r.relationships?.map(rel => `${rel.religion_id} (${rel.status}): ${rel.description}`).join('; ') || 'None';
-            
+
             return `${r.id}: ${r.name} (${r.type})
   Alignment: ${r.alignment}
   Domain: ${r.domain || 'N/A'}
@@ -234,12 +303,12 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           }).join('\n\n');
           contextParts.push(`RELIGIONS:\n${relDetails}`);
         }
-        
+
         // NPCs - ALL fields
         if (worldContext.npcs?.npcs?.length > 0) {
           const npcDetails = worldContext.npcs.npcs.map(n => {
             const services = Array.isArray(n.services) ? n.services.join(', ') : 'None';
-            
+
             return `${n.id}: ${n.name} (${n.role})
   Location: ${n.location}
   Description: ${n.description || 'N/A'}
@@ -250,18 +319,18 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           }).join('\n\n');
           contextParts.push(`NPCS:\n${npcDetails}`);
         }
-        
+
         // Glossary - ALL fields
         if (worldContext.glossary?.terms?.length > 0) {
-          const glossaryDetails = worldContext.glossary.terms.map(t => 
+          const glossaryDetails = worldContext.glossary.terms.map(t =>
             `${t.term} [${t.pronunciation || 'N/A'}] (${t.category}): ${t.definition}. Etymology: ${t.etymology || 'Unknown'}. Usage: ${t.usage || 'N/A'}`
           ).join('\n');
           contextParts.push(`GLOSSARY:\n${glossaryDetails}`);
         }
-        
+
         // Items/Content - ALL fields
         if (worldContext.content?.items?.length > 0) {
-          const itemDetails = worldContext.content.items.map(i => 
+          const itemDetails = worldContext.content.items.map(i =>
             `${i.id}: ${i.name} (${i.type}, ${i.rarity})
   Description: ${i.description || 'N/A'}
   Properties: ${i.properties || 'None'}
@@ -271,7 +340,7 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           ).join('\n\n');
           contextParts.push(`ITEMS:\n${itemDetails}`);
         }
-        
+
         // chatMessages.push({
         //   role: 'system',
         //   content: `You are helping plan story arcs. Here is the COMPLETE world information with ALL details. Remember everything and use exact IDs when discussing arcs:\n\n${contextParts.join('\n\n')}`
@@ -295,10 +364,21 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
 
         Remember: In conversation use names naturally, but in the arc summary use IDs!`
         });
+      } else if (ARC_CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && allMessages.length > MAX_MESSAGES) {
+        // Add conversation summary when world context is not included
+        setIsGeneratingConversationSummary(true);
+        const olderMessages = allMessages.slice(0, -MAX_MESSAGES);
+        const conversationSummary = await generateArcConversationSummary(olderMessages, selectedModel);
+        setIsGeneratingConversationSummary(false);
+        chatMessages.push({
+          role: 'system',
+          content: conversationSummary
+        });
       }
-      
-      // Add conversation messages
-      chatMessages.push(...messages.concat(userMessage).map(msg => ({
+
+      // Use sliding window for conversation messages
+      const recentMessages = allMessages.slice(-MAX_MESSAGES);
+      chatMessages.push(...recentMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       })));
@@ -327,6 +407,7 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
       setMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsGenerating(false);
+      setIsGeneratingConversationSummary(false);
     }
   };
 
@@ -426,7 +507,7 @@ CRITICAL:
     }
 
     // Find the last summary message
-    const summaryMsg = [...messages].reverse().find(m => 
+    const summaryMsg = [...messages].reverse().find(m =>
       m.role === 'assistant' && (
         m.content.includes('=== ARC SUMMARY ===') ||
         m.content.includes('=== ARC ===')
@@ -517,7 +598,33 @@ CRITICAL:
   return (
     <div style={chatStyles.container}>
       <div style={chatStyles.header}>
-        <h3 style={chatStyles.title}>📚 Arc Builder Chat - Phase 3</h3>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <h3 style={chatStyles.title}>📚 Arc Builder Chat - Phase 3</h3>
+          {ARC_CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && messages.length > ARC_CONVERSATION_CONFIG.MAX_MESSAGES && (
+            <span style={{
+              fontSize: '12px',
+              color: '#888',
+              backgroundColor: '#f0f0f0',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              whiteSpace: 'nowrap'
+            }}>
+              📜 {messages.length} msgs (keeping recent {ARC_CONVERSATION_CONFIG.MAX_MESSAGES})
+            </span>
+          )}
+          {worldContext && (
+            <span style={{
+              fontSize: '12px',
+              color: '#0066cc',
+              backgroundColor: '#e6f3ff',
+              padding: '2px 6px',
+              borderRadius: '10px',
+              whiteSpace: 'nowrap'
+            }}>
+              🌍 World Context Loaded
+            </span>
+          )}
+        </div>
         <div style={chatStyles.controls}>
           <div style={chatStyles.tempControl}>
             <label style={chatStyles.tempLabel} title="Creativity Level">
@@ -534,7 +641,7 @@ CRITICAL:
             />
           </div>
 
-          <button 
+          <button
             onClick={clearChat}
             style={chatStyles.clearButton}
             title="Clear Chat"
@@ -548,7 +655,7 @@ CRITICAL:
         {messages.map((msg, idx) => (
           <Message key={idx} message={msg} />
         ))}
-        
+
         {isGenerating && (
           <div style={chatStyles.generatingIndicator}>
             <div style={chatStyles.dots}>
@@ -559,21 +666,28 @@ CRITICAL:
             <span style={chatStyles.generatingText}>AI is thinking...</span>
           </div>
         )}
-        
+
         {isGeneratingSummary && (
           <div style={chatStyles.summaryIndicator}>
             <div style={chatStyles.spinner}>📝</div>
             <span style={chatStyles.summaryText}>Generating structured arc summary...</span>
           </div>
         )}
-        
+
         {isBuilding && (
           <div style={chatStyles.buildingIndicator}>
             <div style={chatStyles.spinner}>⏳</div>
             <span style={chatStyles.buildingText}>Extracting arc data from summary...</span>
           </div>
         )}
-        
+
+        {isGeneratingConversationSummary && (
+          <div style={chatStyles.summaryIndicator}>
+            <div style={chatStyles.spinner}>🔄</div>
+            <span style={chatStyles.summaryText}>Generating conversation summary...</span>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
@@ -589,7 +703,7 @@ CRITICAL:
         >
           {isGeneratingSummary ? '📝 Generating...' : '📝 Generate Arc Summary'}
         </button>
-        
+
         <button
           onClick={buildArcsFromSummary}
           disabled={!hasSummary || isBuilding || isGenerating || isGeneratingSummary}
@@ -618,8 +732,8 @@ CRITICAL:
           rows={3}
           disabled={isGenerating || isBuilding || isGeneratingSummary}
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           style={{
             ...chatStyles.sendButton,
             ...((!input.trim() || isGenerating || isBuilding || isGeneratingSummary) ? chatStyles.sendButtonDisabled : {})
@@ -637,9 +751,9 @@ function Message({ message }) {
   const isUser = message.role === 'user';
   const isSystem = message.role === 'system';
   const isSummary = message.isSummary || (
-    message.role === 'assistant' && 
+    message.role === 'assistant' &&
     (message.content.includes('=== ARC SUMMARY ===') ||
-     message.content.includes('=== ARC ==='))
+      message.content.includes('=== ARC ==='))
   );
 
   return (

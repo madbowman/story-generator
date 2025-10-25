@@ -21,7 +21,9 @@
         "economy": "string - Main economic activities",
         "culture": "string - Cultural notes",
         "defenses": "string - Military/defensive capabilities",
-        "notableFeatures": ["string - array of notable features"],
+        "notableFeatures": [
+          "string - array of notable features"
+        ],
         "coords": {
           "x": "number - X coordinate",
           "y": "number - Y coordinate"
@@ -44,15 +46,21 @@
         "personality": "string - Personality traits",
         "backstory": "string - Character backstory",
         "motivation": "string - Primary motivation",
-        "fears": ["string - array of fears"],
+        "fears": [
+          "string - array of fears"
+        ],
         "skills": [
           {
             "name": "string - Skill name",
             "proficiency": "string - novice/proficient/expert/master"
           }
         ],
-        "weaknesses": ["string - array of weaknesses"],
-        "equipment": ["string - array of equipment/items"],
+        "weaknesses": [
+          "string - array of weaknesses"
+        ],
+        "equipment": [
+          "string - array of equipment/items"
+        ],
         "relationships": [
           {
             "character_id": "string - related character id",
@@ -74,7 +82,9 @@
         "location": "string - location_id where found",
         "description": "string - Brief description",
         "personality": "string - Key personality traits",
-        "services": ["string - services they provide"],
+        "services": [
+          "string - services they provide"
+        ],
         "questGiver": "boolean - Can give quests",
         "attitude": "string - friendly/neutral/hostile"
       }
@@ -89,7 +99,9 @@
         "alignment": "string - alignment",
         "headquarters": "string - location_id",
         "description": "string - Faction description",
-        "goals": ["string - array of faction goals"],
+        "goals": [
+          "string - array of faction goals"
+        ],
         "methods": "string - How they operate",
         "leadership": "string - Leadership structure",
         "membership": "number - Approximate membership",
@@ -102,7 +114,9 @@
             "description": "string - Relationship description"
           }
         ],
-        "members": ["string - array of character_ids who are members"]
+        "members": [
+          "string - array of character_ids who are members"
+        ]
       }
     ]
   },
@@ -115,10 +129,16 @@
         "alignment": "string - alignment",
         "domain": "string - Domain of influence (war/nature/knowledge/etc)",
         "description": "string - Religion description",
-        "beliefs": ["string - array of core beliefs"],
-        "practices": ["string - array of religious practices"],
+        "beliefs": [
+          "string - array of core beliefs"
+        ],
+        "practices": [
+          "string - array of religious practices"
+        ],
         "clergy": "string - How clergy is organized",
-        "temples": ["string - array of location_ids with temples"],
+        "temples": [
+          "string - array of location_ids with temples"
+        ],
         "followers": "number - Approximate number of followers",
         "influence": "string - low/moderate/high/dominant",
         "relationships": [
@@ -128,7 +148,9 @@
             "description": "string - Relationship description"
           }
         ],
-        "holyDays": ["string - array of holy days/festivals"],
+        "holyDays": [
+          "string - array of holy days/festivals"
+        ],
         "symbols": "string - Religious symbols/icons"
       }
     ]
