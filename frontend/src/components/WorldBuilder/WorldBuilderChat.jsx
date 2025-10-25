@@ -48,14 +48,10 @@ async function generateConversationSummary(messagesToSummarize, selectedModel) {
       temperature: 0.1, // Very low temperature for consistent, factual summaries
     });
 
-    console.log('AI Summary Result:', result); // Debug log
-
     if (result.success && result.response) {
       const aiSummary = result.response.trim();
-      console.log('AI Generated Summary:', aiSummary); // Debug log
       return `[Previous conversation summary (${messagesToSummarize.length} messages): ${aiSummary}. Current conversation continues below...]`;
     } else {
-      console.log('AI summary failed, using fallback. Result:', result); // Debug log
       // Fallback to simple summary if AI fails
       return `[Previous conversation summary (${messagesToSummarize.length} messages): World building discussion covering characters, locations, and world details. Current conversation continues below...]`;
     }
@@ -91,7 +87,6 @@ export default function WorldBuilderChat({ selectedModel }) {
         const saved = localStorage.getItem(`worldchat_ai_${currentProject}`);
         if (saved) {
           const parsed = JSON.parse(saved);
-          console.log('🔄 Loaded aiMessages from localStorage:', parsed.length, 'messages');
           return parsed;
         }
       } catch (e) {
@@ -189,43 +184,25 @@ export default function WorldBuilderChat({ selectedModel }) {
       const MAX_MESSAGES = CONVERSATION_CONFIG.MAX_MESSAGES;
       let newAiMessages = [...aiMessages, userMessage];
 
-      // DEBUG: Log message counts
-      console.log('=== CONVERSATION SUMMARY DEBUG ===');
-      console.log('messages.length:', messages.length);
-      console.log('aiMessages.length:', aiMessages.length);
-      console.log('newAiMessages.length:', newAiMessages.length);
-      console.log('MAX_MESSAGES:', MAX_MESSAGES);
-      console.log('ENABLE_SLIDING_WINDOW:', CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW);
-      console.log('Should trigger summary?', CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && newAiMessages.length > MAX_MESSAGES);
-
       // If aiMessages exceeds limit, create rolling summary
       if (CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && newAiMessages.length > MAX_MESSAGES) {
-        console.log('🔄 TRIGGERING CONVERSATION SUMMARY');
         setIsGeneratingConversationSummary(true);
 
         // Summarize first MAX_MESSAGES of current aiMessages
         const messagesToSummarize = newAiMessages.slice(0, MAX_MESSAGES);
-        console.log('📝 Messages to summarize:', messagesToSummarize.length);
-        console.log('📝 Messages to summarize preview:', messagesToSummarize.slice(0, 3).map(m => `${m.role}: ${m.content.substring(0, 50)}...`));
-
         const conversationSummary = await generateConversationSummary(messagesToSummarize, selectedModel);
-        console.log('✅ Generated summary:', conversationSummary.substring(0, 100) + '...');
 
         // Reset aiMessages with summary + remaining messages
         const remainingMessages = newAiMessages.slice(MAX_MESSAGES);
-        console.log('📋 Remaining messages after summary:', remainingMessages.length);
 
         newAiMessages = [
           { role: 'system', content: conversationSummary },
           ...remainingMessages
         ];
 
-        console.log('🔄 Final aiMessages length after summary:', newAiMessages.length);
         setAiMessages(newAiMessages);
         setIsGeneratingConversationSummary(false);
       } else {
-        // No summarization needed yet
-        console.log('⏸️ No summarization needed yet');
         setAiMessages(newAiMessages);
       }
 
@@ -234,9 +211,6 @@ export default function WorldBuilderChat({ selectedModel }) {
         role: msg.role,
         content: msg.content
       }));
-
-      console.log('Full chat message:', chatMessages); // Debug log
-      console.log('AI chat message:', newAiMessages); // Debug log
 
       const result = await aiService.chat(chatMessages, {
         model: selectedModel,
@@ -558,7 +532,6 @@ CRITICAL INSTRUCTIONS:
         throw new Error(result.error || 'Failed to build world');
       }
     } catch (error) {
-      console.error('Build error:', error);
       alert(`Failed to build world: ${error.message}`);
     } finally {
       setIsBuilding(false);
