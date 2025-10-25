@@ -287,6 +287,32 @@ const styles = {
     border: '1px dashed #3a3a3a',
     borderRadius: '8px',
   },
+  uploadSection: {
+    padding: '16px',
+    borderBottom: '1px solid #333',
+    background: '#1a1a1a',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+  },
+  uploadButton: {
+    display: 'inline-block',
+    padding: '10px 16px',
+    background: '#8b5cf6',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    textDecoration: 'none',
+    transition: 'background 0.2s',
+  },
+  uploadMessage: {
+    fontSize: '14px',
+    color: '#10b981',
+    fontWeight: '500',
+  },
 };
 
 export default styles;

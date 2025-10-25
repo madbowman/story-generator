@@ -23,6 +23,8 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
   const [saveMessage, setSaveMessage] = useState('');
   const [saveError, setSaveError] = useState('');
   const [sectionViewMode, setSectionViewMode] = useState('split');
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState('');
 
   const sections = [
     { id: 'world_overview', label: 'World Overview', icon: '🌍' },
@@ -164,6 +166,61 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
     }
   };
 
+  const handleUploadWorldSchema = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setUploading(true);
+    setUploadMessage('Uploading world schema...');
+
+    try {
+      const text = await file.text();
+      const worldSchema = JSON.parse(text);
+
+      // Validate that it has the expected structure
+      const expectedSections = ['world_overview', 'locations', 'characters', 'npcs', 'factions', 'religions', 'glossary', 'content'];
+      const missingSections = expectedSections.filter(section => !worldSchema[section]);
+
+      if (missingSections.length > 0) {
+        throw new Error(`Missing required sections: ${missingSections.join(', ')}`);
+      }
+
+      setUploadMessage('Importing world data...');
+
+      // Upload each section to the backend
+      const uploadPromises = expectedSections.map(async (section) => {
+        try {
+          await api.put(`/projects/${currentProject}/world/${section}`, worldSchema[section]);
+          return { section, success: true };
+        } catch (error) {
+          console.error(`Failed to upload ${section}:`, error);
+          return { section, success: false, error: error.message };
+        }
+      });
+
+      const results = await Promise.all(uploadPromises);
+      const failed = results.filter(r => !r.success);
+
+      if (failed.length === 0) {
+        setUploadMessage('✅ World schema imported successfully!');
+        // Reload the current section to show the new data
+        await loadSection(activeSection);
+      } else {
+        setUploadMessage(`⚠️ Partially imported - ${failed.length} sections failed`);
+        console.error('Failed sections:', failed);
+      }
+
+    } catch (error) {
+      setUploadMessage(`❌ Upload failed: ${error.message}`);
+      console.error('Upload error:', error);
+    } finally {
+      setUploading(false);
+      setTimeout(() => setUploadMessage(''), 5000);
+      // Reset the file input
+      event.target.value = '';
+    }
+  };
+
   if (!currentProject) {
     return (
       <div style={styles.empty}>
@@ -175,6 +232,33 @@ const WorldBuilder = ({ activeSection: propActiveSection, setActiveSection: prop
   return (
     <div style={styles.container}>
       <div style={styles.content}>
+        {/* Upload World Schema Button */}
+        <div style={styles.uploadSection}>
+          <input
+            type="file"
+            accept=".json"
+            onChange={handleUploadWorldSchema}
+            style={{ display: 'none' }}
+            id="world-schema-upload"
+            disabled={uploading}
+          />
+          <label
+            htmlFor="world-schema-upload"
+            style={{
+              ...styles.uploadButton,
+              opacity: uploading ? 0.6 : 1,
+              cursor: uploading ? 'not-allowed' : 'pointer'
+            }}
+          >
+            📤 {uploading ? 'Uploading...' : 'Import World Schema'}
+          </label>
+          {uploadMessage && (
+            <span style={styles.uploadMessage}>
+              {uploadMessage}
+            </span>
+          )}
+        </div>
+
         {loading ? (
           <div style={styles.loading}>Loading...</div>
         ) : (

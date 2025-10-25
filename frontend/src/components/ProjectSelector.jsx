@@ -3,7 +3,7 @@ import { useProject } from '../context/ProjectContext';
 import api from '../services/api';
 
 const ProjectSelector = () => {
-  const { currentProject, loadProject } = useProject();
+  const { currentProject, loadProject, closeProject } = useProject();
   const [projects, setProjects] = useState([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
@@ -103,7 +103,8 @@ const ProjectSelector = () => {
 
       // Note: currentProject is a string (project ID), not an object
       if (currentProject === projectId) {
-        // Project was deleted, will show welcome screen
+        // Project was deleted, close it and clean up localStorage
+        closeProject();
       }
 
       await loadProjects();
