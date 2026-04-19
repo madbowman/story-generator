@@ -245,9 +245,9 @@ def get_arc_schemas():
 
 @app.route('/api/projects/<project_id>/arcs', methods=['GET'])
 def get_project_arcs(project_id):
-    """Get all arcs for a project"""
+    """Get all arcs for a project (from all seasons)"""
     try:
-        arcs_data = arc_manager.load_arcs(project_id)
+        arcs_data = arc_manager.load_all_arcs(project_id)
         return jsonify({
             'success': True,
             'arcs': arcs_data.get('arcs', []),
@@ -373,31 +373,35 @@ def build_arcs_from_summary(project_id):
         if not extraction_result['success']:
             return jsonify(extraction_result), 400
         
-        # Load existing arcs
-        arcs_data = arc_manager.load_arcs(project_id)
-        
-        # Add extracted arcs
+        # Save arcs by season using the new system
         added_arcs = []
         skipped_arcs = []
         
+        # Check for existing arcs across all seasons
+        all_existing_arcs = arc_manager.load_all_arcs(project_id)
+        existing_ids = [a['id'] for a in all_existing_arcs['arcs']]
+        
         for arc in extraction_result['arcs']:
-            # Check if ID already exists
-            existing_ids = [a['id'] for a in arcs_data['arcs']]
             if arc['id'] in existing_ids:
                 skipped_arcs.append(arc['id'])
                 continue
-            
-            arcs_data['arcs'].append(arc)
             added_arcs.append(arc['id'])
         
-        # Save all arcs
-        if arc_manager.save_arcs(project_id, arcs_data):
+        # Filter out skipped arcs
+        arcs_to_add = [arc for arc in extraction_result['arcs'] if arc['id'] not in existing_ids]
+        
+        # Save arcs grouped by season
+        if arc_manager.save_arcs_by_season(project_id, arcs_to_add):
+            # Calculate total arcs after addition
+            updated_all_arcs = arc_manager.load_all_arcs(project_id)
+            
             return jsonify({
                 'success': True,
                 'arcs_added': added_arcs,
                 'arcs_skipped': skipped_arcs,
-                'total_arcs': len(arcs_data['arcs']),
-                'message': f"Successfully added {len(added_arcs)} arc(s)"
+                'total_arcs': len(updated_all_arcs['arcs']),
+                'total_seasons': updated_all_arcs['metadata']['totalSeasons'],
+                'message': f"Successfully added {len(added_arcs)} arc(s) across seasons"
             })
         else:
             return jsonify({
@@ -423,6 +427,55 @@ def get_arcs_by_season(project_id, season):
             'season': season,
             'arcs': arcs,
             'count': len(arcs)
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/projects/<project_id>/arcs/seasons', methods=['GET'])
+def get_available_seasons(project_id):
+    """Get list of available seasons with arc counts"""
+    try:
+        story_dir = PROJECTS_DIR / project_id / 'story'
+        
+        if not story_dir.exists():
+            return jsonify({
+                'success': True,
+                'seasons': []
+            })
+        
+        season_files = list(story_dir.glob('season*_arcs.json'))
+        seasons = []
+        
+        for season_file in season_files:
+            try:
+                with open(season_file, 'r', encoding='utf-8') as f:
+                    season_data = json.load(f)
+                    # Get season from metadata or filename
+                    season_num = season_data.get('metadata', {}).get('season')
+                    if not season_num:
+                        import re
+                        match = re.search(r'season(\d+)_arcs\.json', str(season_file))
+                        season_num = int(match.group(1)) if match else 1
+                    
+                    seasons.append({
+                        'season': season_num,
+                        'arcCount': len(season_data.get('arcs', [])),
+                        'lastUpdated': season_data.get('metadata', {}).get('lastUpdated')
+                    })
+            except Exception as e:
+                print(f"Error reading {season_file}: {e}")
+                continue
+        
+        # Sort by season number
+        seasons.sort(key=lambda x: x['season'])
+        
+        return jsonify({
+            'success': True,
+            'seasons': seasons
         })
     except Exception as e:
         return jsonify({

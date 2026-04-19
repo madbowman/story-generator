@@ -88,6 +88,24 @@ export default function ArcBuilderChat({ selectedModel }) {
     }
     return [];
   });
+
+  // Separate AI-optimized message state for sliding window with rolling summaries
+  const [aiMessages, setAiMessages] = useState(() => {
+    // Load saved AI conversation state for this project from localStorage
+    if (currentProject) {
+      try {
+        const saved = localStorage.getItem(`arcchat_ai_${currentProject}`);
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to load saved AI conversation:', e);
+      }
+    }
+    console.log('🔄 No saved aiMessages found, starting fresh');
+    return [];
+  });
   const [input, setInput] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isGeneratingSummary, setIsGeneratingSummary] = useState(false);
@@ -130,18 +148,19 @@ export default function ArcBuilderChat({ selectedModel }) {
 
   // Initial AI greeting with world context
   useEffect(() => {
-    if (messages.length === 0 && currentProject && worldContext) {
+    if (messages.length === 0 && aiMessages.length === 0 && currentProject && worldContext) {
       const characterList = worldContext.characters?.characters?.map(c => c.name).join(', ') || 'None';
       const locationList = worldContext.locations?.places?.map(l => l.name).join(', ') || 'None';
 
       const greeting = {
         role: 'assistant',
-        content: `Welcome! I'm ready to help you plan story arcs for "${currentProject.title}".\n\n**Phase 3 Workflow:**\n\n1. **Discuss Story Arcs**: Tell me about your story arcs - plot, characters, episodes\n2. **Generate Arc Summary**: Click "📝 Generate Arc Summary" for structured output\n3. **Build Arcs**: Click "📚 Build Arcs from Summary" to create arcs.json\n\n**Your World Context:**\n• Characters: ${characterList}\n• Locations: ${locationList}\n\nLet's plan your story! What arcs do you have in mind?`,
+        content: `Welcome! I'm ready to help you plan story arcs for "${currentProject}".\n\n**Phase 3 Workflow:**\n\n1. **Discuss Story Arcs**: Tell me about your story arcs - plot, characters, episodes\n2. **Generate Arc Summary**: Click "📝 Generate Arc Summary" for structured output\n3. **Build Arcs**: Click "📚 Build Arcs from Summary" to create season-based arcs.json\n\n**Your World Context:**\n• Characters: ${characterList}\n• Locations: ${locationList}\n\nLet's plan your story! What arcs do you have in mind?`,
         timestamp: new Date().toISOString(),
       };
       setMessages([greeting]);
+      setAiMessages([greeting]);
     }
-  }, [currentProject, worldContext, messages.length]);
+  }, [currentProject, worldContext, messages.length, aiMessages.length]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -168,6 +187,17 @@ export default function ArcBuilderChat({ selectedModel }) {
     }
   }, [messages, currentProject]);
 
+  // Save aiMessages to localStorage
+  useEffect(() => {
+    if (currentProject && aiMessages.length > 0) {
+      try {
+        localStorage.setItem(`arcchat_ai_${currentProject}`, JSON.stringify(aiMessages));
+      } catch (e) {
+        console.error('Failed to save AI messages:', e);
+      }
+    }
+  }, [aiMessages, currentProject]);
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -184,14 +214,41 @@ export default function ArcBuilderChat({ selectedModel }) {
     setIsGenerating(true);
 
     try {
+      // Update AI messages state with rolling summary approach
+      const MAX_MESSAGES = ARC_CONVERSATION_CONFIG.MAX_MESSAGES;
+      let newAiMessages = [...aiMessages, userMessage];
+
+      // If aiMessages exceeds limit, create rolling summary
+      if (ARC_CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && newAiMessages.length > MAX_MESSAGES) {
+        setIsGeneratingConversationSummary(true);
+
+        // Summarize first MAX_MESSAGES of current aiMessages
+        const messagesToSummarize = newAiMessages.slice(0, MAX_MESSAGES);
+        const conversationSummary = await generateArcConversationSummary(messagesToSummarize, selectedModel);
+
+        // Reset aiMessages with summary + remaining messages
+        const remainingMessages = newAiMessages.slice(MAX_MESSAGES);
+
+        newAiMessages = [
+          { role: 'system', content: conversationSummary },
+          ...remainingMessages
+        ];
+
+        setAiMessages(newAiMessages);
+        setIsGeneratingConversationSummary(false);
+      } else {
+        setAiMessages(newAiMessages);
+      }
+
       const chatMessages = [];
 
       // Only add world context on FIRST message or periodically to refresh context
-      const MAX_MESSAGES = ARC_CONVERSATION_CONFIG.MAX_MESSAGES;
-      const allMessages = messages.concat(userMessage);
       const shouldIncludeWorldContext =
-        (ARC_CONVERSATION_CONFIG.INCLUDE_WORLD_CONTEXT_FIRST_MESSAGE && allMessages.length <= 2) ||
-        allMessages.length % ARC_CONVERSATION_CONFIG.WORLD_CONTEXT_FREQUENCY === 0;
+        (ARC_CONVERSATION_CONFIG.INCLUDE_WORLD_CONTEXT_FIRST_MESSAGE && newAiMessages.length <= 2) ||
+        newAiMessages.length % ARC_CONVERSATION_CONFIG.WORLD_CONTEXT_FREQUENCY === 0;
+
+      console.log('Should include world context:', shouldIncludeWorldContext);
+      console.log('World context available:', worldContext);
 
       if (worldContext && shouldIncludeWorldContext) {
         const contextParts = [];
@@ -341,11 +398,6 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           contextParts.push(`ITEMS:\n${itemDetails}`);
         }
 
-        // chatMessages.push({
-        //   role: 'system',
-        //   content: `You are helping plan story arcs. Here is the COMPLETE world information with ALL details. Remember everything and use exact IDs when discussing arcs:\n\n${contextParts.join('\n\n')}`
-        // });
-
         chatMessages.push({
           role: 'system',
           content: `You are helping plan story arcs. Here is the COMPLETE world information.
@@ -364,25 +416,16 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
 
         Remember: In conversation use names naturally, but in the arc summary use IDs!`
         });
-      } else if (ARC_CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && allMessages.length > MAX_MESSAGES) {
-        // Add conversation summary when world context is not included
-        setIsGeneratingConversationSummary(true);
-        const olderMessages = allMessages.slice(0, -MAX_MESSAGES);
-        const conversationSummary = await generateArcConversationSummary(olderMessages, selectedModel);
-        setIsGeneratingConversationSummary(false);
-        chatMessages.push({
-          role: 'system',
-          content: conversationSummary
-        });
       }
 
-      // Use sliding window for conversation messages
-      const recentMessages = allMessages.slice(-MAX_MESSAGES);
-      chatMessages.push(...recentMessages.map(msg => ({
+      // Prepare messages for AI (use optimized aiMessages)
+      chatMessages.push(...newAiMessages.map(msg => ({
         role: msg.role,
         content: msg.content
       })));
 
+      console.log('Sending chat messages to AI:', chatMessages);
+      
       const result = await aiService.chat(chatMessages, {
         model: selectedModel,
         temperature: temperature,
@@ -394,7 +437,15 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
           content: result.response,
           timestamp: new Date().toISOString(),
         };
+
+        // Update both message states
         setMessages(prev => [...prev, aiMessage]);
+        setAiMessages(prev => [...prev, aiMessage]);
+
+        // Focus back to input after AI responds
+        setTimeout(() => {
+          inputRef.current?.focus();
+        }, 100);
       } else {
         throw new Error(result.error);
       }
@@ -405,6 +456,11 @@ Physics Rules: ${wo.rulesPhysics || 'Standard'}`);
         timestamp: new Date().toISOString(),
       };
       setMessages(prev => [...prev, errorMessage]);
+
+      // Focus back to input even on error
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 100);
     } finally {
       setIsGenerating(false);
       setIsGeneratingConversationSummary(false);
@@ -574,10 +630,12 @@ CRITICAL:
   const clearChat = () => {
     if (window.confirm('Clear all messages? This cannot be undone.')) {
       setMessages([]);
+      setAiMessages([]);
       setHasSummary(false);
       if (currentProject) {
         try {
           localStorage.removeItem(`arcchat_${currentProject}`);
+          localStorage.removeItem(`arcchat_ai_${currentProject}`);
         } catch (e) {
           console.error('Failed to clear saved conversation:', e);
         }
