@@ -1,25 +1,21 @@
 """
 Story Builder App - Flask Backend
 Main application entry point
-Phase 2.1: AI Summary-Based World Building
+AI Summary-Based World Building
 """
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from pathlib import Path
 import json
 
-# FIXED IMPORTS - removed 'backend.' prefix
 from modules.ai_integration.ollama_client import OllamaClient
 from modules.world_builder.project_manager import ProjectManager
 from modules.world_builder.world_builder import WorldBuilder
 from modules.world_builder.world_extractor import WorldExtractor
-from modules.consistency.validator import ConsistencyValidator
-from modules.story_engine import ArcManager, ArcExtractor
 
 app = Flask(__name__)
 CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}})
 
-# ADDED: Setup projects directory
 PROJECTS_DIR = Path(__file__).parent.parent / 'projects'
 PROJECTS_DIR.mkdir(exist_ok=True)
 
@@ -28,10 +24,6 @@ ollama = OllamaClient()
 project_manager = ProjectManager()
 world_builder = WorldBuilder(PROJECTS_DIR)
 world_extractor = WorldExtractor(ollama)
-consistency_validator = ConsistencyValidator()
-
-arc_manager = ArcManager(PROJECTS_DIR)
-arc_extractor = ArcExtractor()
 
 # ============================================================================
 # AI ENDPOINTS
@@ -133,7 +125,6 @@ def delete_project(project_id):
     result = project_manager.delete_project(PROJECTS_DIR, project_id)
     return jsonify(result), 200 if result['success'] else 404
 
-# ADDED: World building endpoints
 @app.route('/api/projects/<project_id>/world/<section>', methods=['GET'])
 def get_world_section(project_id, section):
     """Get specific world section"""
@@ -149,19 +140,6 @@ def update_world_section(project_id, section):
     result = world_builder.update_section(PROJECTS_DIR, project_id, section, data)
     return jsonify(result), 200 if result['success'] else 400
 
-# ADDED: Consistency check endpoint
-@app.route('/api/projects/<project_id>/consistency/check', methods=['POST'])
-def check_consistency(project_id):
-    """Run consistency validation"""
-    data = request.json
-    scope = data.get('scope', 'world')
-    result = consistency_validator.validate(PROJECTS_DIR, project_id, scope)
-    return jsonify(result)
-
-# ============================================================================
-# WORLD BUILDING FROM CONVERSATION - PHASE 2.1
-# ============================================================================
-
 @app.route('/api/world/schemas', methods=['GET'])
 def get_world_schemas():
     """Get world building JSON schemas for AI reference"""
@@ -176,11 +154,10 @@ def get_world_schemas():
     except json.JSONDecodeError:
         return jsonify({'error': 'Invalid schemas file'}), 500
 
-# PHASE 2.1: AI summary-based extraction
 @app.route('/api/projects/<project_id>/world/build-from-summary', methods=['POST'])
 def build_world_from_summary(project_id):
     """
-    Build world from AI-generated summary (Phase 2.1)
+    Build world from AI-generated summary
     Body: {
         "summary": str (AI-generated structured summary),
         "schemas": {...}
@@ -216,274 +193,6 @@ def build_world_from_summary(project_id):
     else:
         return jsonify(result), 400
     
-# ============================================================================
-# ARC ENDPOINTS - Phase 3
-# ============================================================================
-
-@app.route('/api/arc/schemas', methods=['GET'])
-def get_arc_schemas():
-    """Get arc schema templates"""
-    try:
-        schema_path = Path(__file__).parent / 'arc_schemas.json'
-        
-        if not schema_path.exists():
-            return jsonify({
-                'success': False,
-                'error': 'Arc schemas file not found'
-            }), 404
-        
-        with open(schema_path, 'r', encoding='utf-8') as f:
-            schemas = json.load(f)
-        
-        return jsonify(schemas)
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs', methods=['GET'])
-def get_project_arcs(project_id):
-    """Get all arcs for a project (from all seasons)"""
-    try:
-        arcs_data = arc_manager.load_all_arcs(project_id)
-        return jsonify({
-            'success': True,
-            'arcs': arcs_data.get('arcs', []),
-            'metadata': arcs_data.get('metadata', {})
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['GET'])
-def get_project_arc(project_id, arc_id):
-    """Get a specific arc"""
-    try:
-        result = arc_manager.get_arc(project_id, arc_id)
-        
-        if result['success']:
-            return jsonify(result)
-        else:
-            return jsonify(result), 404
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs', methods=['POST'])
-def create_arc(project_id):
-    """Create a new arc"""
-    try:
-        arc_data = request.json
-        
-        if not arc_data:
-            return jsonify({
-                'success': False,
-                'error': 'No arc data provided'
-            }), 400
-        
-        result = arc_manager.add_arc(project_id, arc_data)
-        
-        if result['success']:
-            return jsonify(result), 201
-        else:
-            return jsonify(result), 400
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['PUT'])
-def update_arc(project_id, arc_id):
-    """Update an existing arc"""
-    try:
-        arc_data = request.json
-        
-        if not arc_data:
-            return jsonify({
-                'success': False,
-                'error': 'No arc data provided'
-            }), 400
-        
-        result = arc_manager.update_arc(project_id, arc_id, arc_data)
-        
-        if result['success']:
-            return jsonify(result)
-        else:
-            return jsonify(result), 404
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/<arc_id>', methods=['DELETE'])
-def delete_arc(project_id, arc_id):
-    """Delete an arc"""
-    try:
-        result = arc_manager.delete_arc(project_id, arc_id)
-        
-        if result['success']:
-            return jsonify(result)
-        else:
-            return jsonify(result), 404
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/build-from-summary', methods=['POST'])
-def build_arcs_from_summary(project_id):
-    """Build arcs from AI-generated summary"""
-    try:
-        data = request.json
-        summary = data.get('summary', '')
-        schemas = data.get('schemas', {})
-        
-        if not summary:
-            return jsonify({
-                'success': False,
-                'error': 'No summary provided'
-            }), 400
-        
-        # Load world data for context/validation
-        world_data = {
-            'characters': world_builder.load_world_section(project_id, 'characters'),
-            'locations': world_builder.load_world_section(project_id, 'locations'),
-            'factions': world_builder.load_world_section(project_id, 'factions')
-        }
-        
-        # Extract arcs from summary
-        extraction_result = arc_extractor.extract_from_ai_summary(
-            summary, schemas, world_data
-        )
-        
-        if not extraction_result['success']:
-            return jsonify(extraction_result), 400
-        
-        # Save arcs by season using the new system
-        added_arcs = []
-        skipped_arcs = []
-        
-        # Check for existing arcs across all seasons
-        all_existing_arcs = arc_manager.load_all_arcs(project_id)
-        existing_ids = [a['id'] for a in all_existing_arcs['arcs']]
-        
-        for arc in extraction_result['arcs']:
-            if arc['id'] in existing_ids:
-                skipped_arcs.append(arc['id'])
-                continue
-            added_arcs.append(arc['id'])
-        
-        # Filter out skipped arcs
-        arcs_to_add = [arc for arc in extraction_result['arcs'] if arc['id'] not in existing_ids]
-        
-        # Save arcs grouped by season
-        if arc_manager.save_arcs_by_season(project_id, arcs_to_add):
-            # Calculate total arcs after addition
-            updated_all_arcs = arc_manager.load_all_arcs(project_id)
-            
-            return jsonify({
-                'success': True,
-                'arcs_added': added_arcs,
-                'arcs_skipped': skipped_arcs,
-                'total_arcs': len(updated_all_arcs['arcs']),
-                'total_seasons': updated_all_arcs['metadata']['totalSeasons'],
-                'message': f"Successfully added {len(added_arcs)} arc(s) across seasons"
-            })
-        else:
-            return jsonify({
-                'success': False,
-                'error': 'Failed to save arcs'
-            }), 500
-            
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/season/<int:season>', methods=['GET'])
-def get_arcs_by_season(project_id, season):
-    """Get all arcs for a specific season"""
-    try:
-        arcs = arc_manager.get_arcs_by_season(project_id, season)
-        
-        return jsonify({
-            'success': True,
-            'season': season,
-            'arcs': arcs,
-            'count': len(arcs)
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/projects/<project_id>/arcs/seasons', methods=['GET'])
-def get_available_seasons(project_id):
-    """Get list of available seasons with arc counts"""
-    try:
-        story_dir = PROJECTS_DIR / project_id / 'story'
-        
-        if not story_dir.exists():
-            return jsonify({
-                'success': True,
-                'seasons': []
-            })
-        
-        season_files = list(story_dir.glob('season*_arcs.json'))
-        seasons = []
-        
-        for season_file in season_files:
-            try:
-                with open(season_file, 'r', encoding='utf-8') as f:
-                    season_data = json.load(f)
-                    # Get season from metadata or filename
-                    season_num = season_data.get('metadata', {}).get('season')
-                    if not season_num:
-                        import re
-                        match = re.search(r'season(\d+)_arcs\.json', str(season_file))
-                        season_num = int(match.group(1)) if match else 1
-                    
-                    seasons.append({
-                        'season': season_num,
-                        'arcCount': len(season_data.get('arcs', [])),
-                        'lastUpdated': season_data.get('metadata', {}).get('lastUpdated')
-                    })
-            except Exception as e:
-                print(f"Error reading {season_file}: {e}")
-                continue
-        
-        # Sort by season number
-        seasons.sort(key=lambda x: x['season'])
-        
-        return jsonify({
-            'success': True,
-            'seasons': seasons
-        })
-    except Exception as e:
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
 @app.route('/api/projects/<project_id>/world/context', methods=['GET'])
 def get_world_context(project_id):
     """Get complete world context for arc planning"""
@@ -516,7 +225,7 @@ def health_check():
     """Health check endpoint"""
     return jsonify({
         "status": "healthy",
-        "service": "Story Builder Backend - Phase 2.1"
+        "service": "Story Builder Backend"
     })
 
 # ============================================================================
@@ -537,7 +246,7 @@ def internal_error(error):
 
 if __name__ == '__main__':
     print("=" * 60)
-    print("Story Builder Backend Starting - Phase 2.1")
+    print("Story Builder Backend Starting")
     print("=" * 60)
     print(f"Backend API: http://localhost:5000")
     print(f"Projects directory: {PROJECTS_DIR}")

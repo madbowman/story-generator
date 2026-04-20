@@ -203,9 +203,6 @@ class ProjectManager:
         """Create directory structure for new project"""
         # Main directories
         (project_path / 'world').mkdir(parents=True, exist_ok=True)
-        (project_path / 'story' / 'seasons').mkdir(parents=True, exist_ok=True)
-        (project_path / 'state').mkdir(parents=True, exist_ok=True)
-        (project_path / 'exports' / 'tts_scripts').mkdir(parents=True, exist_ok=True)
     
     def _initialize_world_files(self, project_path: Path):
         """Create empty world data files"""
@@ -254,19 +251,3 @@ class ProjectManager:
             json.dump({
                 'items': []
             }, f, indent=2)
-        
-        # Initialize state files
-        state_dir = project_path / 'state'
-        
-        with open(state_dir / 'current_state.json', 'w', encoding='utf-8') as f:
-            json.dump({
-                'lastUpdated': datetime.now().isoformat(),
-                'currentDate': '',
-                'characterPositions': {},
-                'relationships': {},
-                'resources': {},
-                'knownInformation': []
-            }, f, indent=2)
-        
-        with open(state_dir / 'timeline.json', 'w', encoding='utf-8') as f:
-            json.dump({'events': []}, f, indent=2)

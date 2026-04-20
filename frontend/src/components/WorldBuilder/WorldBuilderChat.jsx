@@ -1,5 +1,5 @@
 /**
- * World Builder Chat Component - Phase 2.1
+ * World Builder Chat Component
  * Two-step process: Generate Summary → Build World
  * AI creates structured summary, system extracts from it
  */
@@ -618,7 +618,7 @@ CRITICAL INSTRUCTIONS:
     <div style={chatStyles.container}>
       <div style={chatStyles.header}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <h3 style={chatStyles.title}>🌍 World Building Chat - Phase 2.1</h3>
+          <h3 style={chatStyles.title}>🌍 World Building Chat</h3>
           {CONVERSATION_CONFIG.ENABLE_SLIDING_WINDOW && messages.length > CONVERSATION_CONFIG.MAX_MESSAGES && (
             <span style={{
               fontSize: '12px',

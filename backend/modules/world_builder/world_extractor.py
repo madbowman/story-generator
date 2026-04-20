@@ -1,5 +1,5 @@
 """
-World Extractor Module - Phase 2.1: AI Summary Extraction
+World Extractor Module: AI Summary Extraction
 Extracts world data from AI-generated structured summary
 """
 

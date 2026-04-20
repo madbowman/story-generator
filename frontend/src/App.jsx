@@ -1,7 +1,5 @@
 /**
  * Story Builder App - Main Application
- * Phase 2.1: World Builder with Relationships
- * Phase 3: Story Arcs
  */
 import { useState } from 'react';
 import { ProjectProvider, useProject } from './context/ProjectContext';
@@ -9,8 +7,6 @@ import AIStatus from './components/AIStatus';
 import ProjectSelector from './components/ProjectSelector';
 import WorldBuilder from './components/WorldBuilder/WorldBuilder';
 import WorldBuilderChat from './components/WorldBuilder/WorldBuilderChat';
-import ArcBuilderChat from './components/ArcBuilder/ArcBuilderChat';
-import ArcManager from './components/ArcBuilder/ArcManager';
 import styles from './styles/app/styles';
 
 function App() {
@@ -158,10 +154,10 @@ function MainApp() {
               <nav style={styles.nav}>
                 <h3 style={styles.navTitle}>Navigation</h3>
 
-                {/* PHASE 2.1: World Builder Section */}
+                {/* World Builder Section */}
                 <div style={{ marginBottom: '12px' }}>
                   <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
-                    Phase 2.1: World Building
+                    World Building
                   </h4>
 
                   <NavButton
@@ -208,79 +204,6 @@ function MainApp() {
                     </div>
                   )}
                 </div>
-
-                {/* PHASE 3: Story Arcs Section */}
-                <div style={{ marginBottom: '12px' }}>
-                  <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
-                    Phase 3: Story Arcs
-                  </h4>
-
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <NavButton
-                      label="Story Arcs"
-                      icon="📚"
-                      active={activeView === 'arc-chat' || activeView === 'arc-manager'}
-                      onClick={handleArcNavClick}
-                    />
-                    <button
-                      style={styles.navToggle}
-                      onClick={toggleArcSubmenu}
-                      aria-expanded={arcSubmenuOpen}
-                      aria-label="Toggle Story Arcs submenu"
-                    >
-                      {arcSubmenuOpen ? '▾' : '▸'}
-                    </button>
-                  </div>
-
-                  {(activeView === 'arc-chat' || activeView === 'arc-manager') && arcSubmenuOpen && (
-                    <div style={{ marginTop: '8px', paddingLeft: '6px' }}>
-                      <button
-                        style={{
-                          ...styles.navButton,
-                          ...(activeView === 'arc-chat' ? styles.navButtonActive : {}),
-                          paddingLeft: '28px',
-                          fontSize: '13px'
-                        }}
-                        onClick={() => handleSetActiveView('arc-chat')}
-                      >
-                        <span style={styles.navIcon}>💬</span>
-                        <span>Build Arc Chat</span>
-                      </button>
-                      <button
-                        style={{
-                          ...styles.navButton,
-                          ...(activeView === 'arc-manager' ? styles.navButtonActive : {}),
-                          paddingLeft: '28px',
-                          fontSize: '13px'
-                        }}
-                        onClick={() => handleSetActiveView('arc-manager')}
-                      >
-                        <span style={styles.navIcon}>📋</span>
-                        <span>Arc Manager</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* PHASE 4+: Coming Soon */}
-                <div style={{ marginBottom: '12px' }}>
-                  <h4 style={{ ...styles.navTitle, fontSize: '12px', opacity: 0.7, marginBottom: '8px' }}>
-                    Phase 4+: Coming Soon
-                  </h4>
-
-                  <NavButton
-                    label="Episodes"
-                    icon="📝"
-                    active={activeView === 'episodes'}
-                    onClick={() => handleSetActiveView('episodes')}
-                  />
-                  <NavButton
-                    label="Export"
-                    icon="📤"
-                    active={activeView === 'export'}
-                    onClick={() => handleSetActiveView('export')}
-                  />
-                </div>
               </nav>
 
               {projectData && (
@@ -306,10 +229,6 @@ function MainApp() {
             <main style={styles.centerPanel}>
               {activeView === 'world-chat' && <WorldBuilderChat selectedModel={selectedModel} />}
               {activeView === 'world' && <WorldBuilder activeSection={activeSection} setActiveSection={handleSetActiveSection} />}
-              {activeView === 'arc-chat' && <ArcBuilderChat selectedModel={selectedModel} />}
-              {activeView === 'arc-manager' && <ArcManager projectId={currentProject} />}
-              {activeView === 'episodes' && <PlaceholderView title="Episodes" phase="Phase 4" />}
-              {activeView === 'export' && <PlaceholderView title="Export" phase="Phase 5" />}
             </main>
           </>
         )}
@@ -370,37 +289,8 @@ function WelcomeScreen() {
               Build your story world collaboratively with AI assistance
             </p>
           </div>
-          <div style={styles.welcomeStep}>
-            <span style={styles.welcomeStepNumber}>3</span>
-            <p style={styles.welcomeStepText}>
-              Plan story arcs spanning multiple episodes with plot beats
-            </p>
-          </div>
-          <div style={styles.welcomeStep}>
-            <span style={styles.welcomeStepNumber}>4</span>
-            <p style={styles.welcomeStepText}>
-              Develop episodes with consistent characters, locations, and timelines
-            </p>
-          </div>
-          <div style={styles.welcomeStep}>
-            <span style={styles.welcomeStepNumber}>5</span>
-            <p style={styles.welcomeStepText}>
-              Export production-ready TTS scripts for audio production
-            </p>
-          </div>
         </div>
       </div>
-    </div>
-  );
-}
-
-function PlaceholderView({ title, phase }) {
-  return (
-    <div style={styles.placeholder}>
-      <h2 style={styles.placeholderTitle}>{title}</h2>
-      <p style={styles.placeholderText}>
-        This feature is coming in {phase} of development.
-      </p>
     </div>
   );
 }
